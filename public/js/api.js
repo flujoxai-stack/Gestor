@@ -1,69 +1,165 @@
-const API_URL = 'http://localhost:3000/api';
+/**
+ * api.js — Capa de servicio: conecta el frontend con el backend Express/SQLite
+ */
+
+const API_URL = '/api';
+
+// Genera un ID único tipo timestamp (compatible con el sistema original)
+function genId() {
+    return Date.now() + Math.random().toString(36).substr(2, 5);
+}
 
 const api = {
-    async getProjects() {
-        const response = await fetch(`${API_URL}/projects`);
-        return response.json();
+    // ---- STATE (carga completa de una vez) ----
+    async getState() {
+        const res = await fetch(`${API_URL}/state`);
+        if (!res.ok) throw new Error('Error cargando estado');
+        return res.json();
     },
+
+    // ---- PROJECTS ----
     async createProject(data) {
-        const response = await fetch(`${API_URL}/projects`, {
+        const id = genId();
+        const res = await fetch(`${API_URL}/projects`, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...data, id: String(id) })
+        });
+        if (!res.ok) throw new Error('Error creando proyecto');
+        return { ...data, id: String(id), tasks: [] };
+    },
+    async updateProject(id, data) {
+        const res = await fetch(`${API_URL}/projects/${id}`, {
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        return response.json();
+        if (!res.ok) throw new Error('Error actualizando proyecto');
+        return res.json();
+    },
+    async deleteProject(id) {
+        const res = await fetch(`${API_URL}/projects/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Error eliminando proyecto');
+        return res.json();
     },
 
-    async getTasks() {
-        const response = await fetch(`${API_URL}/tasks`);
-        return response.json();
-    },
-    async createTask(data) {
-        const response = await fetch(`${API_URL}/tasks`, {
+    // ---- TASKS ----
+    async createTask(projectId, taskData) {
+        const id = genId();
+        const res = await fetch(`${API_URL}/tasks`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify({
+                id: String(id),
+                project_id: String(projectId),
+                title: taskData.title,
+                description: taskData.description || '',
+                status: taskData.status || 'todo',
+                priority: taskData.priority || 'Media',
+                due_date: taskData.dueDate || taskData.due_date || ''
+            })
         });
-        return response.json();
+        if (!res.ok) throw new Error('Error creando tarea');
+        return { ...taskData, id: String(id), dueDate: taskData.dueDate || '' };
+    },
+    async updateTask(id, taskData) {
+        const res = await fetch(`${API_URL}/tasks/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                title: taskData.title,
+                description: taskData.description || '',
+                status: taskData.status || 'todo',
+                priority: taskData.priority || 'Media',
+                due_date: taskData.dueDate || taskData.due_date || ''
+            })
+        });
+        if (!res.ok) throw new Error('Error actualizando tarea');
+        return res.json();
+    },
+    async deleteTask(id) {
+        const res = await fetch(`${API_URL}/tasks/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Error eliminando tarea');
+        return res.json();
     },
 
-    async getFinances() {
-        const response = await fetch(`${API_URL}/finances`);
-        return response.json();
-    },
+    // ---- FINANCES ----
     async createFinance(data) {
-        const response = await fetch(`${API_URL}/finances`, {
+        const id = genId();
+        const res = await fetch(`${API_URL}/finances`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify({ ...data, id: String(id) })
         });
-        return response.json();
+        if (!res.ok) throw new Error('Error creando movimiento');
+        return { ...data, id: String(id) };
+    },
+    async deleteFinance(id) {
+        const res = await fetch(`${API_URL}/finances/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Error eliminando movimiento');
+        return res.json();
     },
 
-    async getActivities() {
-        const response = await fetch(`${API_URL}/activities`);
-        return response.json();
-    },
-    async createActivity(data) {
-        const response = await fetch(`${API_URL}/activities`, {
+    // ---- ACTIVITIES ----
+    async logActivity(title, desc) {
+        const id = genId();
+        const date = new Date().toISOString();
+        const res = await fetch(`${API_URL}/activities`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify({ id: String(id), title, desc: desc || '', date })
         });
-        return response.json();
+        if (!res.ok) throw new Error('Error registrando actividad');
+        return { id: String(id), title, desc: desc || '', date };
     },
 
-    async getNotes() {
-        const response = await fetch(`${API_URL}/notes`);
-        return response.json();
-    },
+    // ---- NOTES ----
     async createNote(data) {
-        const response = await fetch(`${API_URL}/notes`, {
+        const id = genId();
+        const created_at = new Date().toISOString();
+        const res = await fetch(`${API_URL}/notes`, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...data, id: String(id), created_at })
+        });
+        if (!res.ok) throw new Error('Error creando nota');
+        return { ...data, id: String(id), created_at };
+    },
+    async updateNote(id, data) {
+        const res = await fetch(`${API_URL}/notes/${id}`, {
+            method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
-        return response.json();
+        if (!res.ok) throw new Error('Error actualizando nota');
+        return res.json();
+    },
+    async deleteNote(id) {
+        const res = await fetch(`${API_URL}/notes/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Error eliminando nota');
+        return res.json();
+    },
+
+    // ---- FOLDERS ----
+    async createFolder(name) {
+        const res = await fetch(`${API_URL}/folders`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+        });
+        if (!res.ok) throw new Error('Error creando carpeta');
+        return res.json();
+    },
+
+    // ---- SETTINGS ----
+    async saveSetting(key, value) {
+        const res = await fetch(`${API_URL}/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key, value })
+        });
+        if (!res.ok) throw new Error('Error guardando ajuste');
+        return res.json();
     }
 };
 
