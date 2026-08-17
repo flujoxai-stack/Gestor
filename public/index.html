@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Proyectos</title>
+    <script>
+        window.onerror = function(msg, url, line, col, error) {
+            alert("Error: " + msg + "\nLine: " + line + "\nCol: " + col);
+        };
+    </script>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236e48c1' stroke-width='2'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'></path></svg>">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <a href="#" class="sidebar-brand" style="margin-bottom: 0;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                GestorPro
+            </a>
+            <div style="font-size: 0.8rem; color: var(--text-muted); padding-left: 2.8rem; margin-bottom: 1.5rem; margin-top: -5px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">flujoxai</div>
+            
+            <div class="nav-section-title">MENU</div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a href="#" class="nav-link active" id="nav-dashboard"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg> Dashboard</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" id="nav-projects"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg> Proyectos</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" id="nav-warranty"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg> Garantías</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" id="nav-tasks"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg> Tareas</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" id="nav-calendar"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg> Calendario</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" id="nav-finances"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Finanzas</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" id="nav-activity"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Actividad</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" id="nav-pipeline"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg> Pipeline</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" id="nav-reports"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Reportes</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" id="nav-database"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg> Base de Datos</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" id="nav-notes"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg> Notas</a></li>
+            </ul>
+
+            <div class="nav-section-title mt-4">TOOLS</div>
+            <ul class="nav-menu" style="flex-grow:0;">
+                <li class="nav-item">
+                    <div class="dropdown">
+                        <a href="#" class="nav-link" data-bs-toggle="dropdown"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg> Datos</a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" id="export-btn">Exportar</a></li>
+                            <li><a class="dropdown-item" href="#" id="import-btn">Importar</a></li>
+                        </ul>
+                    </div>
+                </li>
+            </ul>
+            <div class="nav-bottom-card mt-3"><h6>Upgrade to Pro</h6><p>Discover the benefits of an upgraded account</p><button class="nav-bottom-btn">Upgrade 30</button></div>
+            <input type="file" id="import-file-input" style="display: none;" accept=".json">
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-wrapper">
+            <header class="top-header">
+                <div class="header-left">
+                    <h1 id="main-title">Performance Overview</h1>
+                    <p id="main-subtitle">Data summary for today</p>
+                </div>
+                <div class="header-actions">
+                    <div class="user-profile">
+                        <div class="avatar"></div>
+                        <div class="user-info"><span>Admin Store</span><small>Pro User</small></div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-area">
+                
+                <!-- Dashboard View -->
+                <div id="dashboard-view">
+                    <!-- Fila 1: Metricas y Gráfico Principal -->
+                    <div class="dash-grid">
+                        <div class="dash-left-col">
+                            <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; align-items: start;">
+                                <div class="dash-top-metrics" style="margin-bottom: 0; gap: 1.5rem; display: grid; grid-template-columns: 1fr 1fr;">
+                                    <div class="dash-card metric-card primary" style="padding: 1.2rem;"><div class="metric-header"><div class="metric-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div></div><div class="metric-body"><h4 style="font-size:0.8rem;">Completadas</h4><h2 id="stat-done" style="font-size:1.5rem;">0</h2></div></div>
+                                    <div class="dash-card metric-card" style="padding: 1.2rem;"><div class="metric-header"><div class="metric-icon" style="color: #6e48c1; background: rgba(110,72,193,0.1);"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div></div><div class="metric-body"><h4 style="font-size:0.8rem;">Pendientes</h4><h2 id="stat-pending" style="font-size:1.5rem;">0</h2></div></div>
+                                    <div class="dash-card metric-card" style="padding: 1.2rem;"><div class="metric-header"><div class="metric-icon" style="color: #10b981; background: rgba(16,185,129,0.1);"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg></div></div><div class="metric-body"><h4 style="font-size:0.8rem;">Proyectos</h4><h2 id="stat-proj" style="font-size:1.5rem;">0</h2></div></div>
+                                    <div class="dash-card metric-card" style="padding: 1.2rem;"><div class="metric-header"><div class="metric-icon" style="color: #f59e0b; background: rgba(245,158,11,0.1);"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg></div></div><div class="metric-body"><h4 style="font-size:0.8rem;">Total Tareas</h4><h2 id="stat-total" style="font-size:1.5rem;">0</h2></div></div>
+                                </div>
+                                <div style="display: flex; flex-direction: column;">
+                                    <div class="dash-card" style="flex: 1; display:flex; flex-direction:column; padding: 1.5rem;">
+                                        <div class="chart-header" style="margin-bottom:0.5rem; border-bottom:none;"><div><h3 style="font-size:1.1rem; font-weight:700;">Tracking My Productivity</h3></div></div>
+                                        <div style="display:flex; justify-content:center; align-items:center; flex-direction:column; flex:none; margin-top: 10px;">
+                                            <div style="position: relative; width: 180px; height: 100px;">
+                                                <svg width="180" height="100" viewBox="0 0 220 120" id="productivity-gauge"></svg>
+                                                <div style="position: absolute; bottom:-10px; left:50%; transform: translate(-50%, 0); text-align: center;">
+                                                    <h3 id="productivity-val" style="margin:0; font-size: 1.8rem; font-weight:700; color: #6e48c1;">0%</h3>
+                                                    <p style="margin:0; font-size: 0.75rem; color: var(--text-muted); margin-top: -3px;">Weekly activity</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div style="margin-top: 1.5rem;">
+                                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.8rem;">
+                                                <h3 style="font-size:0.95rem; margin:0; font-weight:600;">Global Time Tracking</h3>
+                                            </div>
+                                            <div id="time-tracking-container" style="padding: 1.2rem; background-color: var(--card-bg); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+                                                <div style="display: flex; flex-direction: column;">
+                                                    <span style="color:var(--text-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">Sesión Actual</span>
+                                                    <span id="global-timer-display" style="font-size: 1.8rem; font-weight: 700; font-family: monospace; color: var(--sidebar-active); line-height: 1;">00:00:00</span>
+                                                </div>
+                                                <button id="global-timer-btn" onclick="toggleGlobalTimer()" style="width: 48px; height: 48px; border-radius: 50%; background: var(--sidebar-active); color: white; border: none; display: flex; justify-content: center; align-items: center; cursor: pointer; box-shadow: 0 4px 10px rgba(110,72,193,0.3); transition: all 0.2s;">
+                                                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="dash-card">
+                                <div class="chart-header"><div><h3>Progreso por Proyecto</h3><p>Tareas completadas vs pendientes</p></div></div>
+                                <div style="position: relative; height: 250px; width: 100%;"><canvas id="barChart"></canvas></div>
+                            </div>
+                        </div>
+
+                        <div class="dash-left-col">
+                            <div class="dash-card">
+                                <div class="chart-header"><div><h3>Estado de Tareas</h3><p>Distribución global</p></div></div>
+                                <div style="position: relative; height: 180px; display: flex; justify-content: center;">
+                                    <canvas id="pieChart"></canvas>
+                                    <div style="position: absolute; top:50%; left:50%; transform: translate(-50%, -50%); text-align: center;"><h3 id="pie-center-val" style="margin:0; font-size: 1.5rem; font-weight:700;">0</h3><p style="margin:0; font-size:0.7rem; color:var(--text-muted);">Total</p></div>
+                                </div>
+                                <div class="custom-list mt-4">
+                                    <div class="custom-list-item"><div class="item-left"><span style="color: #6e48c1;">●</span> Completadas</div><div class="item-right"><span id="list-done">0</span></div></div>
+                                    <div class="custom-list-item"><div class="item-left"><span style="color: #10b981;">●</span> En Revisión</div><div class="item-right"><span id="list-rev">0</span></div></div>
+                                    <div class="custom-list-item"><div class="item-left"><span style="color: #f43f5e;">●</span> Por Hacer</div><div class="item-right"><span id="list-todo">0</span></div></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Tareas Proximas -->
+                            <div class="dash-card" style="flex-grow: 1;">
+                                <div class="chart-header mb-2"><div><h3>Tareas Próximas</h3><p>Fechas más cercanas</p></div></div>
+                                <div class="custom-list" id="upcoming-tasks-list"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Fila 2: Area Suave y Polar/Radar -->
+                    <div class="dash-grid-2-1">
+                        <div class="dash-card">
+                            <div class="chart-header"><div><h3>Carga de Trabajo Futura</h3><p>Tareas con vencimiento en los próximos 7 días</p></div></div>
+                            <div style="position: relative; height: 250px; width: 100%;"><canvas id="areaChart"></canvas></div>
+                        </div>
+                        <div class="dash-card">
+                            <div class="chart-header"><div><h3>Análisis de Prioridades</h3><p>Nivel de urgencia</p></div></div>
+                            <div style="position: relative; height: 250px; width: 100%;"><canvas id="radarChart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Fila 3: Finanzas y Pipeline Summary -->
+                    <div class="dash-grid-1-1 mt-4">
+                        <div class="dash-card">
+                            <div class="chart-header"><div><h3>Resumen Financiero</h3><p>Balance Global (Dashboard)</p></div></div>
+                            <div style="display:flex; justify-content: space-around; padding: 1.5rem 0;">
+                                <div style="text-align:center;">
+                                    <p style="color:var(--text-muted); margin:0; font-size:0.8rem;">Balance Total</p>
+                                    <h3 id="dash-fin-bal" style="margin:0; font-weight:700;">$0</h3>
+                                </div>
+                                <div style="text-align:center;">
+                                    <p style="color:var(--text-muted); margin:0; font-size:0.8rem;">Ingresos</p>
+                                    <h3 id="dash-fin-inc" style="color:#10b981; margin:0; font-weight:700;">$0</h3>
+                                </div>
+                                <div style="text-align:center;">
+                                    <p style="color:var(--text-muted); margin:0; font-size:0.8rem;">Gastos</p>
+                                    <h3 id="dash-fin-exp" style="color:#ef4444; margin:0; font-weight:700;">$0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dash-card">
+                            <div class="chart-header"><div><h3>Estado de Proyectos</h3><p>Distribución en Pipeline</p></div></div>
+                            <div class="custom-list mt-2">
+                                <div class="custom-list-item" style="padding: 0.5rem 0.8rem;"><div class="item-left">Prospectos</div><div class="item-right"><span class="badge-blue metric-badge" id="dash-pipe-lead" style="background: rgba(110,72,193,0.1); color: #6e48c1;">0</span></div></div>
+                                <div class="custom-list-item" style="padding: 0.5rem 0.8rem;"><div class="item-left">En Negociación</div><div class="item-right"><span class="badge-blue metric-badge" id="dash-pipe-neg" style="background: rgba(245,158,11,0.1); color: #f59e0b;">0</span></div></div>
+                                <div class="custom-list-item" style="padding: 0.5rem 0.8rem;"><div class="item-left">En Ejecución</div><div class="item-right"><span class="badge-blue metric-badge" id="dash-pipe-exe" style="background: rgba(59,130,246,0.1); color: #3b82f6;">0</span></div></div>
+                                <div class="custom-list-item" style="padding: 0.5rem 0.8rem;"><div class="item-left">Entregados</div><div class="item-right"><span class="badge-blue metric-badge" id="dash-pipe-done" style="background: rgba(16,185,129,0.1); color: #10b981;">0</span></div></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fila 3: Polar Area y extras -->
+                    <div class="dash-grid-1-1">
+                        <div class="dash-card">
+                            <div class="chart-header"><div><h3>Densidad por Proyecto</h3><p>Volumen de tareas en cada proyecto</p></div></div>
+                            <div style="position: relative; height: 300px; width: 100%;"><canvas id="polarChart"></canvas></div>
+                        </div>
+                        <div class="dash-card" style="background: transparent; box-shadow: none;">
+                            <!-- Espacio libre para mantener el grid balanceado visualmente -->
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Projects View -->
+                <div id="projects-view" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3"><h4 class="mb-0 fw-semibold">Mis Proyectos</h4><button class="btn btn-primary" style="background-color: var(--sidebar-active); border:none;" data-bs-toggle="modal" data-bs-target="#addProjectModal">+ Nuevo Proyecto</button></div>
+                    <div class="d-flex gap-2 mb-4" id="project-filters">
+                        <button class="filter-btn active" onclick="setProjectFilter(this, 'all')">Todos</button>
+                        <button class="filter-btn" onclick="setProjectFilter(this, 'active')">En Progreso</button>
+                        <button class="filter-btn" onclick="setProjectFilter(this, 'done')">Completados</button>
+                    </div>
+                    <div id="project-list" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4"></div>
+                </div>
+
+                <!-- Warranty View -->
+                <div id="warranty-view" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3"><h4 class="mb-0 fw-semibold">Garantías de Proyectos</h4></div>
+                    <div id="warranty-list" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4"></div>
+                </div>
+
+                <!-- Board View -->
+                <div id="board-view" style="display: none;">
+                    <div class="sub-nav"><a href="#" class="sub-nav-link active" id="view-project-tasks">Tareas proyecto</a></div>
+                    <div class="kanban-board">
+                        <div class="kanban-column"><div class="kanban-header kanban-header-todo"><h4>To do</h4><span class="task-count" id="count-todo">0</span></div><div id="todo-list" class="task-list"></div><button class="add-task-inline" onclick="openQuickTask('todo')">+ Nueva tarea</button></div>
+                        <div class="kanban-column"><div class="kanban-header kanban-header-inprogress"><h4>En Revisión</h4><span class="task-count" id="count-inprogress">0</span></div><div id="inprogress-list" class="task-list"></div><button class="add-task-inline" onclick="openQuickTask('inprogress')">+ Nueva tarea</button></div>
+                        <div class="kanban-column"><div class="kanban-header kanban-header-done"><h4>Completa</h4><span class="task-count" id="count-done">0</span></div><div id="done-list" class="task-list"></div><button class="add-task-inline" onclick="openQuickTask('done')">+ Nueva tarea</button></div>
+                        <div class="kanban-column"><div class="kanban-header kanban-header-paused"><h4>En pausa</h4><span class="task-count" id="count-paused">0</span></div><div id="paused-list" class="task-list"></div><button class="add-task-inline" onclick="openQuickTask('paused')">+ Nueva tarea</button></div>
+                    </div>
+                </div>
+                
+                <!-- Calendar View -->
+                <div id="calendar-view" style="display: none;">
+                    <div id="calendar-container"></div>
+                </div>
+
+                <!-- Finances View -->
+                <div id="finances-view" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3"><h4 class="mb-0 fw-semibold">Finanzas</h4><button class="btn btn-primary" style="background-color: var(--sidebar-active); border:none;" data-bs-toggle="modal" data-bs-target="#addFinanceModal">+ Nuevo Movimiento</button></div>
+                    <div class="dash-grid">
+                        <div class="dash-left-col">
+                            <div class="dash-top-metrics" style="grid-template-columns: 1fr 1fr 1fr;">
+                                <div class="dash-card metric-card primary"><div class="metric-header"><div class="metric-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div></div><div class="metric-body"><h4>Balance Total</h4><h2 id="fin-balance">$0</h2></div></div>
+                                <div class="dash-card metric-card"><div class="metric-header"><div class="metric-icon" style="color: #10b981; background: rgba(16,185,129,0.1);"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg></div></div><div class="metric-body"><h4>Ingresos</h4><h2 id="fin-income" style="color: #10b981;">$0</h2></div></div>
+                                <div class="dash-card metric-card"><div class="metric-header"><div class="metric-icon" style="color: #ef4444; background: rgba(239,68,68,0.1);"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path></svg></div></div><div class="metric-body"><h4>Gastos</h4><h2 id="fin-expense" style="color: #ef4444;">$0</h2></div></div>
+                            </div>
+                            <div class="dash-card mt-4">
+                                <div class="chart-header"><div><h3>Historial de Movimientos</h3></div></div>
+                                <div class="table-responsive">
+                                    <table class="table" style="color: var(--text-main);">
+                                        <thead><tr><th>Fecha</th><th>Concepto</th><th>Tipo</th><th>Monto</th></tr></thead>
+                                        <tbody id="finance-table-body"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Activity View -->
+                <div id="activity-view" style="display: none;">
+                    <div class="dash-card">
+                        <div class="chart-header"><div><h3 class="fw-semibold">Historial de Actividad</h3><p>Acciones recientes en tus proyectos</p></div></div>
+                        <div id="activity-timeline" class="custom-list"></div>
+                    </div>
+                </div>
+
+                <!-- Pipeline View -->
+                <div id="pipeline-view" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3"><h4 class="mb-0 fw-semibold">Pipeline de Proyectos</h4></div>
+                    <div class="kanban-board">
+                        <div class="kanban-column"><div class="kanban-header kanban-header-todo"><h4>Prospecto</h4></div><div id="pipe-lead" class="task-list"></div></div>
+                        <div class="kanban-column"><div class="kanban-header kanban-header-inprogress"><h4>Negociación</h4></div><div id="pipe-negotiation" class="task-list"></div></div>
+                        <div class="kanban-column"><div class="kanban-header kanban-header-paused"><h4>Ejecución</h4></div><div id="pipe-execution" class="task-list"></div></div>
+                        <div class="kanban-column"><div class="kanban-header kanban-header-done"><h4>Entregado</h4></div><div id="pipe-delivered" class="task-list"></div></div>
+                    </div>
+                </div>
+
+                <!-- Reports View -->
+                <div id="reports-view" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3"><h4 class="mb-0 fw-semibold">Reportes Avanzados</h4></div>
+                    <div class="dash-grid-1-1">
+                        <div class="dash-card">
+                            <div class="chart-header"><div><h3>Proyectos por Etapa</h3><p>Distribución en Pipeline</p></div></div>
+                            <div style="position: relative; height: 250px; width: 100%;"><canvas id="reportsPipelineChart"></canvas></div>
+                        </div>
+                        <div class="dash-card">
+                            <div class="chart-header"><div><h3>Rentabilidad (Ingresos vs Gastos)</h3><p>Balance Global</p></div></div>
+                            <div style="position: relative; height: 250px; width: 100%;"><canvas id="reportsProfitChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Database View -->
+                <div id="database-view" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3"><h4 class="mb-0 fw-semibold">Base de Datos</h4></div>
+                    <div class="dash-card">
+                        <div class="d-flex gap-2 mb-3">
+                            <button class="filter-btn active" id="db-tab-projects" onclick="switchDbTab('projects')">Proyectos</button>
+                            <button class="filter-btn" id="db-tab-finances" onclick="switchDbTab('finances')">Finanzas</button>
+                            <button class="filter-btn" id="db-tab-activities" onclick="switchDbTab('activities')">Actividad</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table" style="color: var(--text-main);">
+                                <thead id="db-thead"></thead>
+                                <tbody id="db-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes View -->
+                <div id="notes-view" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3"><h4 class="mb-0 fw-semibold">Mis Notas</h4><div><button class="btn btn-outline-secondary me-2" style="border-radius:20px; font-size:0.85rem;" onclick="promptNewFolder()">+ Carpeta</button><button class="btn btn-primary" style="background-color: var(--sidebar-active); border:none;" onclick="addNote()">+ Nueva Nota</button></div></div>
+                    <div class="d-flex gap-2 mb-4" id="notes-folders-tabs" style="overflow-x: auto; padding-bottom: 5px;"></div>
+                    <div id="notes-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5rem; align-items: start;">
+                        <!-- Notes will be injected here -->
+                    </div>
+                </div>
+
+            </div>
+            <button class="btn-floating-primary" id="fab-add-task">+ Nueva Tarea</button>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal fade" id="addProjectModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-semibold">Crear Proyecto</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="mb-3"><label class="form-label small text-muted">Nombre del Proyecto</label><input type="text" id="new-project-name" class="form-control" placeholder="Ej. Rediseño Web"></div><div class="row"><div class="col-6 mb-3"><label class="form-label small text-muted">Fecha de Inicio</label><input type="date" id="new-project-start" class="form-control"></div><div class="col-6 mb-3"><label class="form-label small text-muted">Fecha de Terminación</label><input type="date" id="new-project-end" class="form-control"></div></div></div><div class="modal-footer border-0 pt-0"><button type="button" class="btn btn-primary" style="background-color: var(--sidebar-active); border:none; width: 100%;" id="add-project-btn">Crear Proyecto</button></div></div></div></div>
+    <div class="modal fade" id="editWarrantyModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-semibold">Asignar Garantía</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="warranty-project-id"><div class="row"><div class="col-6 mb-3"><label class="form-label small text-muted">Inicio Garantía</label><input type="date" id="warranty-start-input" class="form-control"></div><div class="col-6 mb-3"><label class="form-label small text-muted">Fin Garantía</label><input type="date" id="warranty-end-input" class="form-control"></div></div></div><div class="modal-footer border-0 pt-0"><button type="button" class="btn btn-primary" style="background-color: var(--sidebar-active); border:none; width: 100%;" id="save-warranty-btn">Guardar Garantía</button></div></div></div></div>
+    <div class="modal fade" id="taskDetailModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-semibold">Detalles de Tarea</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="task-id-input"><input type="hidden" id="task-status-input"><div class="mb-3"><input type="text" id="task-title-input" class="form-control" placeholder="Título"></div><div class="mb-3"><textarea id="task-description-input" class="form-control" rows="2" placeholder="Detalles..."></textarea></div><div class="row"><div class="col-md-6 mb-3"><select id="task-priority-input" class="form-select"><option value="Baja">Baja</option><option value="Media" selected>Media</option><option value="Alta">Alta</option></select></div><div class="col-md-6 mb-3"><input type="date" id="task-due-date-input" class="form-control"></div></div></div><div class="modal-footer border-0 pt-0 d-flex justify-content-between"><button type="button" class="btn btn-outline-danger" id="delete-task-btn">Eliminar</button><button type="button" class="btn btn-primary" style="background-color: var(--sidebar-active); border:none;" id="save-task-details-btn">Guardar</button></div></div></div></div>
+    <div class="modal fade" id="addFinanceModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-semibold">Nuevo Movimiento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="mb-3"><label class="form-label small text-muted">Tipo</label><select id="fin-type-input" class="form-select"><option value="income">Ingreso</option><option value="expense">Gasto</option></select></div><div class="mb-3"><label class="form-label small text-muted">Concepto</label><input type="text" id="fin-concept-input" class="form-control" placeholder="Ej. Pago inicial"></div><div class="row"><div class="col-6 mb-3"><label class="form-label small text-muted">Monto ($)</label><input type="number" id="fin-amount-input" class="form-control" placeholder="0.00"></div><div class="col-6 mb-3"><label class="form-label small text-muted">Fecha</label><input type="date" id="fin-date-input" class="form-control"></div></div></div><div class="modal-footer border-0 pt-0"><button type="button" class="btn btn-primary" style="background-color: var(--sidebar-active); border:none; width: 100%;" id="add-finance-btn">Guardar Movimiento</button></div></div></div></div>
+
+    <div class="modal fade" id="addNoteModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-semibold">Nota</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="note-id-input"><div class="mb-3"><label class="form-label small text-muted">Carpeta</label><select id="note-folder-input" class="form-select"></select></div><div class="mb-3"><label class="form-label small text-muted">Título</label><input type="text" id="note-title-input" class="form-control" placeholder="Título de la nota"></div><div class="mb-3"><label class="form-label small text-muted">Contenido</label><textarea id="note-content-input" class="form-control" rows="5" placeholder="Escribe tu nota aquí..."></textarea></div><div class="mb-3"><label class="form-label small text-muted">Color</label><input type="color" id="note-color-input" class="form-control form-control-color w-100" value="#ffffff"></div></div><div class="modal-footer border-0 pt-0"><button type="button" class="btn btn-primary" style="background-color: var(--sidebar-active); border:none; width: 100%;" id="save-note-btn">Guardar Nota</button></div></div></div></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/main.js"></script>
+</body>
+    
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container-custom"></div>
+
+    <!-- Copilot Demo Widget -->
+    <div style="position: fixed; bottom: 30px; right: 30px; z-index: 1050; display: flex; flex-direction: column; align-items: flex-end; gap: 15px;">
+        <div id="copilot-tooltip" style="background: var(--card-bg); color: var(--text-main); padding: 15px 20px; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.15); font-size: 0.9rem; border: 1px solid var(--border-color); display: none; margin-right: 10px; max-width: 250px;">
+            <div style="font-weight: 600; margin-bottom: 5px; color: #6e48c1; display:flex; align-items:center; gap:5px;">
+                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/></svg> GestorPro Copilot
+            </div>
+            <div id="copilot-text"></div>
+        </div>
+        <button id="copilot-btn" onclick="openCopilotDemo()" onmouseover="this.style.transform='scale(1.1)';" onmouseout="this.style.transform='scale(1)';" style="width: 60px; height: 60px; border-radius: 50%; border: none; background: linear-gradient(135deg, #6e48c1, #ec4899); color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(110, 72, 193, 0.4); cursor: pointer; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+            <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+                <path d="M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/>
+            </svg>
+        </button>
+    </div>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
