@@ -45,8 +45,9 @@
     </div>
 
     <div id="app-shell" class="app-container" style="display:none;">
+        <div id="sidebar-backdrop" class="sidebar-backdrop" aria-hidden="true"></div>
         <!-- Sidebar -->
-        <aside class="sidebar">
+        <aside id="sidebar-menu" class="sidebar">
             <a href="#" class="sidebar-brand" style="margin-bottom: 0;">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
                 GestorPro
@@ -88,6 +89,11 @@
         <main class="main-wrapper">
             <header class="top-header">
                 <div class="header-left">
+                    <button type="button" id="mobile-menu-toggle" class="mobile-menu-toggle" aria-label="Abrir menú" aria-controls="sidebar-menu" aria-expanded="false">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </button>
                     <h1 id="main-title">Performance Overview</h1>
                     <p id="main-subtitle">Data summary for today</p>
                 </div>

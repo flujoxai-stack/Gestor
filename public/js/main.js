@@ -157,6 +157,49 @@ window.startGestorApp = async function startGestorApp() {
         database:  document.getElementById('nav-database'),
         notes:     document.getElementById('nav-notes')
     };
+    const sidebar = document.getElementById('sidebar-menu');
+    const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    const mobileNavTargets = document.querySelectorAll('.sidebar .nav-link, .sidebar .nav-bottom-btn, .sidebar .dropdown-item');
+    const mobileBreakpoint = window.matchMedia('(max-width: 992px)');
+
+    function syncSidebarState(open) {
+        if (!sidebar || !sidebarBackdrop || !mobileMenuToggle) return;
+        sidebar.classList.toggle('is-open', open);
+        sidebarBackdrop.classList.toggle('is-visible', open);
+        mobileMenuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        document.body.style.overflow = open ? 'hidden' : '';
+    }
+
+    function closeSidebar() {
+        syncSidebarState(false);
+    }
+
+    function toggleSidebar() {
+        if (!sidebar) return;
+        syncSidebarState(!sidebar.classList.contains('is-open'));
+    }
+
+    if (mobileMenuToggle) {
+        mobileMenuToggle.addEventListener('click', (event) => {
+            event.preventDefault();
+            toggleSidebar();
+        });
+    }
+
+    if (sidebarBackdrop) {
+        sidebarBackdrop.addEventListener('click', closeSidebar);
+    }
+
+    mobileNavTargets.forEach((target) => {
+        target.addEventListener('click', () => {
+            if (mobileBreakpoint.matches) closeSidebar();
+        });
+    });
+
+    window.addEventListener('resize', () => {
+        if (!mobileBreakpoint.matches) closeSidebar();
+    });
 
     function showView(viewName, title, subtitle) {
         Object.values(views).forEach(v => { v.style.display = 'none'; v.classList.remove('animate-view'); });
@@ -168,6 +211,7 @@ window.startGestorApp = async function startGestorApp() {
         document.getElementById('main-title').textContent = title;
         document.getElementById('main-subtitle').textContent = subtitle || '';
         document.getElementById('fab-add-task').style.display = viewName === 'board' ? 'flex' : 'none';
+        if (mobileBreakpoint.matches) closeSidebar();
     }
 
     // ---- CHARTS ----
