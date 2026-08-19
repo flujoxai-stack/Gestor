@@ -307,3 +307,164 @@ body[data-auth="locked"] {
         #calendar-container { background-color: var(--card-bg); border-radius: var(--border-radius); padding: 1.5rem; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); height: 70vh; }
         .fc-theme-standard .fc-scrollgrid, .fc-theme-standard td, .fc-theme-standard th { border-color: var(--border-color); }
         .fc .fc-button-primary { background-color: var(--primary-accent); border-color: var(--primary-accent); }
+
+        @media (max-width: 992px) {
+            body {
+                overflow: auto;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            .app-container {
+                flex-direction: column;
+                height: auto;
+                min-height: 100vh;
+            }
+
+            .sidebar {
+                width: 100%;
+                border-radius: 0 0 20px 20px;
+                padding: 1rem;
+            }
+
+            .nav-menu {
+                max-height: none;
+            }
+
+            .main-wrapper {
+                min-height: calc(100vh - 60px);
+                overflow: visible;
+            }
+
+            .content-area {
+                padding: 1rem;
+                overflow: visible;
+            }
+
+            .top-header {
+                padding: 1rem;
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+
+            .header-actions {
+                width: 100%;
+                justify-content: flex-end;
+                flex-wrap: wrap;
+            }
+
+            .dash-grid,
+            .dash-grid-2-1,
+            .dash-grid-1-1,
+            .dash-top-metrics,
+            .dash-left-col {
+                grid-template-columns: 1fr !important;
+                display: grid !important;
+            }
+
+            .dash-grid,
+            .dash-grid-2-1,
+            .dash-grid-1-1,
+            .dash-top-metrics {
+                gap: 1rem;
+            }
+
+            .kanban-board {
+                gap: 1rem;
+            }
+
+            .kanban-column {
+                min-width: 260px;
+                width: 260px;
+            }
+
+            .btn-floating-primary {
+                bottom: 1rem;
+                right: 1rem;
+                padding: 0.7rem 1rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .sidebar {
+                padding: 0.85rem 0.8rem;
+            }
+
+            .sidebar-brand {
+                font-size: 1.05rem;
+            }
+
+            .nav-link {
+                font-size: 0.9rem;
+                padding: 0.7rem 0.85rem;
+            }
+
+            .nav-bottom-card {
+                padding: 1rem;
+            }
+
+            .header-left h1 {
+                font-size: 1.45rem;
+            }
+
+            .user-profile {
+                width: 100%;
+                justify-content: flex-end;
+            }
+
+            .header-logout-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .dash-card {
+                padding: 1rem;
+            }
+
+            .metric-card {
+                height: auto;
+                min-height: 120px;
+            }
+
+            .metric-body h2 {
+                font-size: 1.6rem;
+            }
+
+            .chart-header h3 {
+                font-size: 1rem;
+            }
+
+            .sub-nav {
+                gap: 1rem;
+                overflow-x: auto;
+                white-space: nowrap;
+                padding-bottom: 0.75rem;
+            }
+
+            .d-flex.justify-content-between.align-items-center.mb-3 {
+                flex-direction: column;
+                align-items: stretch !important;
+                gap: 0.75rem;
+            }
+
+            .d-flex.justify-content-between.align-items-center.mb-3 .btn,
+            .d-flex.justify-content-between.align-items-center.mb-3 > div {
+                width: 100%;
+            }
+
+            #notes-list {
+                grid-template-columns: 1fr !important;
+            }
+
+            #calendar-container {
+                height: 58vh;
+                padding: 1rem;
+            }
+
+            .auth-card {
+                width: min(94vw, 420px);
+                padding: 24px;
+                border-radius: 24px;
+            }
+        }
