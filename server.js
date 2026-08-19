@@ -31,9 +31,6 @@ async function getProjectsWithTasks() {
     }));
 }
 
-// ====================================================
-// MAIN STATE ENDPOINT
-// ====================================================
 app.get('/api/state', async (req, res) => {
     try {
         const projects = await getProjectsWithTasks();
@@ -58,9 +55,6 @@ app.get('/api/state', async (req, res) => {
     }
 });
 
-// ====================================================
-// PROJECTS
-// ====================================================
 app.get('/api/projects', async (req, res) => {
     try {
         const rows = await selectRows('projects', { order: 'pipeline_order.asc' });
@@ -118,9 +112,6 @@ app.delete('/api/projects/:id', async (req, res) => {
     }
 });
 
-// ====================================================
-// TASKS
-// ====================================================
 app.get('/api/tasks', async (req, res) => {
     try {
         const rows = await selectRows('tasks');
@@ -175,9 +166,6 @@ app.delete('/api/tasks/:id', async (req, res) => {
     }
 });
 
-// ====================================================
-// FINANCES
-// ====================================================
 app.get('/api/finances', async (req, res) => {
     try {
         const rows = await selectRows('finances', { order: 'date.desc' });
@@ -217,9 +205,6 @@ app.delete('/api/finances/:id', async (req, res) => {
     }
 });
 
-// ====================================================
-// ACTIVITIES
-// ====================================================
 app.get('/api/activities', async (req, res) => {
     try {
         const rows = await selectRows('activities', { order: 'date.desc', limit: 50 });
@@ -248,9 +233,6 @@ app.post('/api/activities', async (req, res) => {
     }
 });
 
-// ====================================================
-// NOTES
-// ====================================================
 app.get('/api/notes', async (req, res) => {
     try {
         const rows = await selectRows('notes', { order: 'created_at.desc' });
@@ -304,9 +286,6 @@ app.delete('/api/notes/:id', async (req, res) => {
     }
 });
 
-// ====================================================
-// NOTE FOLDERS
-// ====================================================
 app.get('/api/folders', async (req, res) => {
     try {
         const rows = await selectRows('note_folders', { columns: 'name' });
@@ -332,9 +311,6 @@ app.post('/api/folders', async (req, res) => {
     }
 });
 
-// ====================================================
-// SETTINGS
-// ====================================================
 app.get('/api/settings/:key', async (req, res) => {
     try {
         const row = await selectOneRow('settings', { filters: { key: req.params.key } });
@@ -361,7 +337,6 @@ app.post('/api/settings', async (req, res) => {
     }
 });
 
-// Catch-all: serve index.html for SPA
 app.get('/{*path}', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
