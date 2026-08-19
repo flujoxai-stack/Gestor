@@ -5,7 +5,8 @@ const authScreen = document.getElementById('auth-screen');
 const appShell = document.getElementById('app-shell');
 const loginForm = document.getElementById('login-form');
 const loginBtn = document.getElementById('login-btn');
-const logoutBtn = document.getElementById('logout-btn');
+const loginLogoutBtn = document.getElementById('logout-btn');
+const headerLogoutBtn = document.getElementById('header-logout-btn');
 const authMessage = document.getElementById('auth-message');
 
 function setMessage(text, type = 'info') {
@@ -18,7 +19,8 @@ function setLocked(locked) {
     document.body.dataset.auth = locked ? 'locked' : 'unlocked';
     if (authScreen) authScreen.style.display = locked ? 'flex' : 'none';
     if (appShell) appShell.style.display = locked ? 'none' : 'flex';
-    if (logoutBtn) logoutBtn.style.display = locked ? 'none' : 'inline-flex';
+    if (loginLogoutBtn) loginLogoutBtn.style.display = locked ? 'none' : 'inline-flex';
+    if (headerLogoutBtn) headerLogoutBtn.style.display = locked ? 'inline-flex' : 'none';
     if (loginForm) loginForm.style.display = locked ? 'grid' : 'none';
 }
 
@@ -113,11 +115,14 @@ loginForm?.addEventListener('submit', async (event) => {
     }
 });
 
-logoutBtn?.addEventListener('click', async () => {
+async function logout() {
     saveSession(null);
     setLocked(true);
     window.location.reload();
-});
+}
+
+loginLogoutBtn?.addEventListener('click', logout);
+headerLogoutBtn?.addEventListener('click', logout);
 
 (async () => {
     try {
