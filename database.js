@@ -1,90 +1,141 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const SUPABASE_KEY =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_KEY ||
+    '';
 
-const dbPath = path.resolve(__dirname, 'database.sqlite');
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+    console.warn(
+        'Supabase env vars are missing. Set SUPABASE_URL and SUPABASE_ANON_KEY (or SUPABASE_SERVICE_ROLE_KEY).'
+    );
+}
 
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('Error connecting to the database:', err.message);
-    } else {
-        console.log('Connected to the SQLite database.');
-        initializeDatabase();
+const REST_BASE = SUPABASE_URL ? `${SUPABASE_URL}/rest/v1` : '';
+
+function buildUrl(table, params = {}) {
+    const url = new URL(`${REST_BASE}/${table}`);
+    for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined && value !== null && value !== '') {
+            url.searchParams.set(key, value);
+        }
     }
-});
+    return url;
+}
 
-function initializeDatabase() {
-    db.serialize(() => {
-        // Projects Table
-        db.run(`CREATE TABLE IF NOT EXISTS projects (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            status TEXT DEFAULT 'lead',
-            start_date TEXT,
-            end_date TEXT,
-            warranty_start TEXT,
-            warranty_end TEXT,
-            pipeline_order INTEGER DEFAULT 0
-        )`);
+function buildFilterParams(filters = {}) {
+    const params = {};
+    for (const [key, value] of Object.entries(filters)) {
+        if (value === undefined || value === null) continue;
+        params[key] = `eq.${value}`;
+    }
+    return params;
+}
 
-        // Tasks Table
-        db.run(`CREATE TABLE IF NOT EXISTS tasks (
-            id TEXT PRIMARY KEY,
-            project_id TEXT,
-            title TEXT NOT NULL,
-            description TEXT,
-            status TEXT DEFAULT 'todo',
-            priority TEXT DEFAULT 'Media',
-            due_date TEXT,
-            FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE
-        )`);
+function headers(extra = {}) {
+    return {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=representation',
+        ...extra,
+    };
+}
 
-        // Finances Table
-        db.run(`CREATE TABLE IF NOT EXISTS finances (
-            id TEXT PRIMARY KEY,
-            concept TEXT NOT NULL,
-            type TEXT CHECK(type IN ('income', 'expense')) NOT NULL,
-            amount REAL NOT NULL,
-            date TEXT NOT NULL,
-            project_id TEXT
-        )`);
+async function supabaseRequest(table, options = {}) {
+    const {
+        method = 'GET',
+        params = {},
+        body,
+        prefer,
+        allowEmpty = false,
+    } = options;
 
-        // Activities Table (log/feed)
-        db.run(`CREATE TABLE IF NOT EXISTS activities (
-            id TEXT PRIMARY KEY,
-            title TEXT NOT NULL,
-            desc TEXT,
-            date TEXT NOT NULL
-        )`);
+    if (!REST_BASE || !SUPABASE_KEY) {
+        throw new Error('Supabase configuration is missing.');
+    }
 
-        // Notes Table
-        db.run(`CREATE TABLE IF NOT EXISTS notes (
-            id TEXT PRIMARY KEY,
-            title TEXT NOT NULL,
-            content TEXT,
-            folder TEXT DEFAULT 'General',
-            color TEXT DEFAULT '#ffffff',
-            created_at TEXT NOT NULL
-        )`);
+    const url = buildUrl(table, params);
+    const res = await fetch(url, {
+        method,
+        headers: headers(prefer ? { Prefer: prefer } : {}),
+        body: body === undefined ? undefined : JSON.stringify(body),
+    });
 
-        // Note Folders Table
-        db.run(`CREATE TABLE IF NOT EXISTS note_folders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL
-        )`, () => {
-            // Insert default folders
-            db.run(`INSERT OR IGNORE INTO note_folders (name) VALUES ('General')`);
-            db.run(`INSERT OR IGNORE INTO note_folders (name) VALUES ('APIs')`);
-            db.run(`INSERT OR IGNORE INTO note_folders (name) VALUES ('Contraseñas')`);
-        });
+    const text = await res.text();
+    if (!res.ok) {
+        throw new Error(text || `Supabase request failed with ${res.status}`);
+    }
 
-        // Settings Table (for globalTimeSpent, etc.)
-        db.run(`CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value TEXT
-        )`);
+    if (!text) return allowEmpty ? null : [];
 
-        console.log('Database tables initialized.');
+    try {
+        return JSON.parse(text);
+    } catch {
+        return text;
+    }
+}
+
+async function selectRows(table, options = {}) {
+    const {
+        columns = '*',
+        filters = {},
+        order,
+        limit,
+    } = options;
+    const params = {
+        select: columns,
+        ...buildFilterParams(filters),
+    };
+    if (order) params.order = order;
+    if (limit) params.limit = String(limit);
+    const rows = await supabaseRequest(table, { method: 'GET', params, allowEmpty: true });
+    return Array.isArray(rows) ? rows : rows ? [rows] : [];
+}
+
+async function selectOneRow(table, options = {}) {
+    const rows = await selectRows(table, { ...options, limit: 1 });
+    return rows[0] || null;
+}
+
+async function insertRow(table, row, options = {}) {
+    return supabaseRequest(table, {
+        method: 'POST',
+        params: options.onConflict ? { on_conflict: options.onConflict } : {},
+        body: row,
     });
 }
 
-module.exports = db;
+async function upsertRow(table, row, onConflict = 'id') {
+    return supabaseRequest(table, {
+        method: 'POST',
+        params: { on_conflict: onConflict },
+        prefer: 'resolution=merge-duplicates,return=representation',
+        body: row,
+    });
+}
+
+async function updateRows(table, filters, data) {
+    return supabaseRequest(table, {
+        method: 'PATCH',
+        params: buildFilterParams(filters),
+        body: data,
+    });
+}
+
+async function deleteRows(table, filters) {
+    return supabaseRequest(table, {
+        method: 'DELETE',
+        params: buildFilterParams(filters),
+        allowEmpty: true,
+    });
+}
+
+module.exports = {
+    selectRows,
+    selectOneRow,
+    insertRow,
+    upsertRow,
+    updateRows,
+    deleteRows,
+};

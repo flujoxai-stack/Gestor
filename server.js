@@ -1,7 +1,14 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const db = require('./database');
+require('dotenv').config();
+const {
+    selectRows,
+    selectOneRow,
+    upsertRow,
+    updateRows,
+    deleteRows,
+} = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,61 +17,40 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Helper: Promise wrapper for db.all
-function dbAll(sql, params = []) {
-    return new Promise((resolve, reject) => {
-        db.all(sql, params, (err, rows) => {
-            if (err) reject(err); else resolve(rows);
-        });
-    });
-}
-// Helper: Promise wrapper for db.get
-function dbGet(sql, params = []) {
-    return new Promise((resolve, reject) => {
-        db.get(sql, params, (err, row) => {
-            if (err) reject(err); else resolve(row);
-        });
-    });
-}
-// Helper: Promise wrapper for db.run
-function dbRun(sql, params = []) {
-    return new Promise((resolve, reject) => {
-        db.run(sql, params, function (err) {
-            if (err) reject(err); else resolve(this);
-        });
-    });
+async function getProjectsWithTasks() {
+    const projects = await selectRows('projects', { order: 'pipeline_order.asc' });
+    const tasks = await selectRows('tasks');
+    return projects.map((project) => ({
+        ...project,
+        tasks: tasks
+            .filter((task) => task.project_id === project.id)
+            .map((task) => ({
+                ...task,
+                dueDate: task.due_date,
+            })),
+    }));
 }
 
 // ====================================================
-// MAIN STATE ENDPOINT (GET all data at once)
+// MAIN STATE ENDPOINT
 // ====================================================
 app.get('/api/state', async (req, res) => {
     try {
-        const projects = await dbAll('SELECT * FROM projects ORDER BY pipeline_order ASC');
-        const tasks    = await dbAll('SELECT * FROM tasks');
-        const finances = await dbAll('SELECT * FROM finances');
-        const activities = await dbAll('SELECT * FROM activities ORDER BY date DESC LIMIT 50');
-        const notes    = await dbAll('SELECT * FROM notes ORDER BY created_at DESC');
-        const folders  = await dbAll('SELECT name FROM note_folders');
-        const timeSetting = await dbGet("SELECT value FROM settings WHERE key = 'globalTimeSpent'");
-
-        // Embed tasks inside each project
-        const projectsWithTasks = projects.map(p => ({
-            ...p,
-            tasks: tasks.filter(t => t.project_id === p.id).map(t => ({
-                ...t,
-                dueDate: t.due_date // alias for frontend compatibility
-            }))
-        }));
+        const projects = await getProjectsWithTasks();
+        const finances = await selectRows('finances', { order: 'date.desc' });
+        const activities = await selectRows('activities', { order: 'date.desc', limit: 50 });
+        const notes = await selectRows('notes', { order: 'created_at.desc' });
+        const folders = await selectRows('note_folders', { columns: 'name' });
+        const timeSetting = await selectOneRow('settings', { filters: { key: 'globalTimeSpent' } });
 
         res.json({
-            projects: projectsWithTasks,
-            currentProjectId: projectsWithTasks.length > 0 ? projectsWithTasks[0].id : null,
+            projects,
+            currentProjectId: projects.length > 0 ? projects[0].id : null,
             finances,
             activities,
             notes,
-            noteFolders: folders.map(f => f.name),
-            globalTimeSpent: timeSetting ? parseInt(timeSetting.value) || 0 : 0
+            noteFolders: folders.map((f) => f.name),
+            globalTimeSpent: timeSetting ? parseInt(timeSetting.value, 10) || 0 : 0,
         });
     } catch (err) {
         console.error(err);
@@ -77,41 +63,59 @@ app.get('/api/state', async (req, res) => {
 // ====================================================
 app.get('/api/projects', async (req, res) => {
     try {
-        const rows = await dbAll('SELECT * FROM projects ORDER BY pipeline_order ASC');
+        const rows = await selectRows('projects', { order: 'pipeline_order.asc' });
         res.json(rows);
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.post('/api/projects', async (req, res) => {
     const { id, name, status, start_date, end_date, warranty_start, warranty_end } = req.body;
     try {
-        const count = await dbGet('SELECT COUNT(*) as c FROM projects');
-        await dbRun(
-            `INSERT INTO projects (id, name, status, start_date, end_date, warranty_start, warranty_end, pipeline_order)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [id, name, status || 'lead', start_date || '', end_date || '', warranty_start || '', warranty_end || '', count.c]
+        const existing = await selectRows('projects', { columns: 'id' });
+        await upsertRow(
+            'projects',
+            {
+                id,
+                name,
+                status: status || 'lead',
+                start_date: start_date || '',
+                end_date: end_date || '',
+                warranty_start: warranty_start || '',
+                warranty_end: warranty_end || '',
+                pipeline_order: existing.length,
+            },
+            'id'
         );
         res.json({ success: true, id });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.put('/api/projects/:id', async (req, res) => {
     const { name, status, start_date, end_date, warranty_start, warranty_end } = req.body;
     try {
-        await dbRun(
-            `UPDATE projects SET name=?, status=?, start_date=?, end_date=?, warranty_start=?, warranty_end=? WHERE id=?`,
-            [name, status, start_date, end_date, warranty_start, warranty_end, req.params.id]
+        await updateRows(
+            'projects',
+            { id: req.params.id },
+            { name, status, start_date, end_date, warranty_start, warranty_end }
         );
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.delete('/api/projects/:id', async (req, res) => {
     try {
-        await dbRun('DELETE FROM tasks WHERE project_id=?', [req.params.id]);
-        await dbRun('DELETE FROM projects WHERE id=?', [req.params.id]);
+        await deleteRows('tasks', { project_id: req.params.id });
+        await deleteRows('projects', { id: req.params.id });
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ====================================================
@@ -119,39 +123,56 @@ app.delete('/api/projects/:id', async (req, res) => {
 // ====================================================
 app.get('/api/tasks', async (req, res) => {
     try {
-        const rows = await dbAll('SELECT * FROM tasks');
+        const rows = await selectRows('tasks');
         res.json(rows);
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.post('/api/tasks', async (req, res) => {
     const { id, project_id, title, description, status, priority, due_date } = req.body;
     try {
-        await dbRun(
-            `INSERT INTO tasks (id, project_id, title, description, status, priority, due_date)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [id, project_id, title, description || '', status || 'todo', priority || 'Media', due_date || '']
+        await upsertRow(
+            'tasks',
+            {
+                id,
+                project_id,
+                title,
+                description: description || '',
+                status: status || 'todo',
+                priority: priority || 'Media',
+                due_date: due_date || '',
+            },
+            'id'
         );
         res.json({ success: true, id });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.put('/api/tasks/:id', async (req, res) => {
     const { title, description, status, priority, due_date } = req.body;
     try {
-        await dbRun(
-            `UPDATE tasks SET title=?, description=?, status=?, priority=?, due_date=? WHERE id=?`,
-            [title, description, status, priority, due_date, req.params.id]
+        await updateRows(
+            'tasks',
+            { id: req.params.id },
+            { title, description, status, priority, due_date }
         );
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.delete('/api/tasks/:id', async (req, res) => {
     try {
-        await dbRun('DELETE FROM tasks WHERE id=?', [req.params.id]);
+        await deleteRows('tasks', { id: req.params.id });
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ====================================================
@@ -159,48 +180,72 @@ app.delete('/api/tasks/:id', async (req, res) => {
 // ====================================================
 app.get('/api/finances', async (req, res) => {
     try {
-        const rows = await dbAll('SELECT * FROM finances ORDER BY date DESC');
+        const rows = await selectRows('finances', { order: 'date.desc' });
         res.json(rows);
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.post('/api/finances', async (req, res) => {
     const { id, concept, type, amount, date, project_id } = req.body;
     try {
-        await dbRun(
-            `INSERT INTO finances (id, concept, type, amount, date, project_id) VALUES (?, ?, ?, ?, ?, ?)`,
-            [id, concept, type, amount, date, project_id || null]
+        await upsertRow(
+            'finances',
+            {
+                id,
+                concept,
+                type,
+                amount,
+                date,
+                project_id: project_id || null,
+            },
+            'id'
         );
         res.json({ success: true, id });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.delete('/api/finances/:id', async (req, res) => {
     try {
-        await dbRun('DELETE FROM finances WHERE id=?', [req.params.id]);
+        await deleteRows('finances', { id: req.params.id });
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ====================================================
-// ACTIVITIES (Feed)
+// ACTIVITIES
 // ====================================================
 app.get('/api/activities', async (req, res) => {
     try {
-        const rows = await dbAll('SELECT * FROM activities ORDER BY date DESC LIMIT 50');
+        const rows = await selectRows('activities', { order: 'date.desc', limit: 50 });
         res.json(rows);
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.post('/api/activities', async (req, res) => {
     const { id, title, desc, date } = req.body;
     try {
-        await dbRun(
-            `INSERT INTO activities (id, title, desc, date) VALUES (?, ?, ?, ?)`,
-            [id, title, desc || '', date]
+        await upsertRow(
+            'activities',
+            {
+                id,
+                title,
+                desc: desc || '',
+                date,
+            },
+            'id'
         );
         res.json({ success: true, id });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ====================================================
@@ -208,38 +253,55 @@ app.post('/api/activities', async (req, res) => {
 // ====================================================
 app.get('/api/notes', async (req, res) => {
     try {
-        const rows = await dbAll('SELECT * FROM notes ORDER BY created_at DESC');
+        const rows = await selectRows('notes', { order: 'created_at.desc' });
         res.json(rows);
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.post('/api/notes', async (req, res) => {
     const { id, title, content, folder, color, created_at } = req.body;
     try {
-        await dbRun(
-            `INSERT INTO notes (id, title, content, folder, color, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
-            [id, title, content || '', folder || 'General', color || '#ffffff', created_at]
+        await upsertRow(
+            'notes',
+            {
+                id,
+                title,
+                content: content || '',
+                folder: folder || 'General',
+                color: color || '#ffffff',
+                created_at,
+            },
+            'id'
         );
         res.json({ success: true, id });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.put('/api/notes/:id', async (req, res) => {
     const { title, content, folder, color } = req.body;
     try {
-        await dbRun(
-            `UPDATE notes SET title=?, content=?, folder=?, color=? WHERE id=?`,
-            [title, content, folder, color, req.params.id]
+        await updateRows(
+            'notes',
+            { id: req.params.id },
+            { title, content, folder, color }
         );
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.delete('/api/notes/:id', async (req, res) => {
     try {
-        await dbRun('DELETE FROM notes WHERE id=?', [req.params.id]);
+        await deleteRows('notes', { id: req.params.id });
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ====================================================
@@ -247,17 +309,27 @@ app.delete('/api/notes/:id', async (req, res) => {
 // ====================================================
 app.get('/api/folders', async (req, res) => {
     try {
-        const rows = await dbAll('SELECT name FROM note_folders');
-        res.json(rows.map(r => r.name));
-    } catch (err) { res.status(500).json({ error: err.message }); }
+        const rows = await selectRows('note_folders', { columns: 'name' });
+        res.json(rows.map((r) => r.name));
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.post('/api/folders', async (req, res) => {
     const { name } = req.body;
     try {
-        await dbRun('INSERT OR IGNORE INTO note_folders (name) VALUES (?)', [name]);
+        await upsertRow(
+            'note_folders',
+            {
+                name,
+            },
+            'name'
+        );
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ====================================================
@@ -265,20 +337,28 @@ app.post('/api/folders', async (req, res) => {
 // ====================================================
 app.get('/api/settings/:key', async (req, res) => {
     try {
-        const row = await dbGet('SELECT value FROM settings WHERE key=?', [req.params.key]);
+        const row = await selectOneRow('settings', { filters: { key: req.params.key } });
         res.json({ value: row ? row.value : null });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.post('/api/settings', async (req, res) => {
     const { key, value } = req.body;
     try {
-        await dbRun(
-            `INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value`,
-            [key, String(value)]
+        await upsertRow(
+            'settings',
+            {
+                key,
+                value: String(value),
+            },
+            'key'
         );
         res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Catch-all: serve index.html for SPA

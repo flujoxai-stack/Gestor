@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Migración de Datos — Invivienda</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0f0f13;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .card {
+            background: #1a1a22;
+            border: 1px solid #2e2e3e;
+            border-radius: 16px;
+            padding: 2.5rem;
+            max-width: 640px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        h1 { font-size: 1.6rem; margin-bottom: 0.4rem; color: #fff; }
+        p  { color: #888; font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.6; }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(110,72,193,0.15);
+            color: #a78bfa;
+            border: 1px solid rgba(110,72,193,0.3);
+            border-radius: 8px;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.8rem;
+            margin: 0.3rem 0.2rem;
+        }
+        .stats { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.2rem 0; }
+        .btn {
+            display: inline-block;
+            padding: 0.8rem 2rem;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            width: 100%;
+            margin-top: 1rem;
+        }
+        .btn-primary { background: #6e48c1; color: #fff; }
+        .btn-primary:hover { background: #7c55d6; transform: translateY(-1px); }
+        .btn-primary:disabled { background: #444; cursor: not-allowed; transform: none; }
+        .btn-danger { background: #f43f5e; color: #fff; margin-top: 0.5rem; }
+        .btn-danger:hover { background: #e11d48; }
+        .btn-secondary {
+            background: #334155;
+            color: #fff;
+            margin-top: 0.5rem;
+        }
+        .btn-secondary:hover { background: #475569; }
+        .log {
+            background: #12121a;
+            border: 1px solid #2e2e3e;
+            border-radius: 10px;
+            padding: 1rem;
+            max-height: 240px;
+            overflow-y: auto;
+            margin-top: 1.5rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.78rem;
+            display: none;
+        }
+        .log .ok  { color: #10b981; }
+        .log .err { color: #f43f5e; }
+        .log .info{ color: #60a5fa; }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #2e2e3e;
+            border-radius: 4px;
+            margin-top: 1rem;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #6e48c1, #10b981);
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        .warning {
+            background: rgba(245,158,11,0.1);
+            border: 1px solid rgba(245,158,11,0.3);
+            border-radius: 8px;
+            padding: 0.8rem 1rem;
+            font-size: 0.82rem;
+            color: #fbbf24;
+            margin-top: 1rem;
+        }
+        .success-msg {
+            background: rgba(16,185,129,0.1);
+            border: 1px solid rgba(16,185,129,0.3);
+            border-radius: 8px;
+            padding: 1rem;
+            color: #10b981;
+            font-weight: 600;
+            text-align: center;
+            margin-top: 1rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>📦 Migración de Datos</h1>
+    <p>Esta herramienta detecta los datos guardados en tu navegador (<code>localStorage</code>) y los transfiere a la nueva base de datos SQLite del servidor.</p>
+
+    <div id="preview">
+        <p style="color:#aaa; margin-bottom:0.5rem;">Datos encontrados en este navegador:</p>
+        <div class="stats" id="stats-badges">Analizando...</div>
+    </div>
+
+    <div class="warning" id="warning-box" style="display:none;">
+        ⚠️ No se encontraron datos en <code>localStorage</code>. Es posible que estés usando otro navegador o perfil diferente al que usabas antes.
+    </div>
+
+    <div class="progress-bar" id="progress-bar">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+
+    <div class="log" id="log"></div>
+    <div class="success-msg" id="success-msg">✅ ¡Migración completada! Todos tus datos están ahora en la base de datos.</div>
+    <div id="import-status" style="display:none; margin-top:0.75rem; padding:0.75rem 1rem; border-radius:10px; border:1px solid #334155; color:#cbd5e1; font-size:0.85rem;"></div>
+
+    <button class="btn btn-primary" id="migrate-btn" onclick="migrate()" disabled>
+        🚀 Migrar mis datos al servidor
+    </button>
+    <button class="btn btn-secondary" id="export-btn" onclick="exportBackup()" disabled>
+        ⬇️ Exportar respaldo JSON
+    </button>
+    <button class="btn btn-secondary" id="import-btn" onclick="document.getElementById('backup-input').click()">
+        📂 Cargar respaldo JSON
+    </button>
+    <button class="btn btn-danger" id="clear-btn" onclick="clearLocal()" style="display:none;">
+        🗑️ Limpiar localStorage (después de verificar los datos)
+    </button>
+    <input type="file" id="backup-input" accept="application/json,.json" style="display:none;">
+    <textarea id="backup-paste" placeholder="O pega aquí el JSON del respaldo si el selector de archivo no responde..." style="display:none; width:100%; min-height:140px; margin-top:0.75rem; border-radius:10px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; padding:0.9rem; font-family:inherit; font-size:0.85rem;"></textarea>
+    <button class="btn btn-secondary" id="paste-btn" onclick="loadPastedBackup()" style="display:none;">
+        📋 Cargar JSON pegado
+    </button>
+    <p style="margin-top:1rem; font-size:0.78rem; color:#555; text-align:center;">Esta página usa el backend de la misma ruta o <code>localhost:3000</code> si la abres en tu equipo.</p>
+</div>
+
+<script>
+const API = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:3000/api'
+    : `${window.location.origin}/api`;
+let foundData = null;
+let foundSource = 'localStorage';
+
+function addLog(msg, type = 'info') {
+    const log = document.getElementById('log');
+    log.style.display = 'block';
+    const line = document.createElement('div');
+    line.className = type;
+    line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+}
+
+function setProgress(pct) {
+    document.getElementById('progress-bar').style.display = 'block';
+    document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+function countFoundData(data) {
+    const source = data && data.data ? data.data : (data || {});
+    const projects = source.projects || [];
+    return {
+        projects: projects.length,
+        tasks: projects.reduce((a, p) => a + (p.tasks || []).length, 0),
+        finances: (source.finances || []).length,
+        notes: (source.notes || []).length,
+        activities: (source.activities || []).length
+    };
+}
+
+function renderPreview(data, sourceLabel) {
+    const statsEl = document.getElementById('stats-badges');
+    const btn = document.getElementById('migrate-btn');
+    const exportBtn = document.getElementById('export-btn');
+    const stats = countFoundData(data);
+    statsEl.innerHTML = `
+        <span class="badge">📁 ${stats.projects} Proyectos</span>
+        <span class="badge">✅ ${stats.tasks} Tareas</span>
+        <span class="badge">💰 ${stats.finances} Movimientos</span>
+        <span class="badge">📝 ${stats.notes} Notas</span>
+        <span class="badge">📋 ${stats.activities} Actividades</span>
+        <span class="badge">🧭 ${sourceLabel}</span>
+    `;
+    btn.disabled = false;
+    exportBtn.disabled = false;
+}
+
+function getLocalStorageBackup() {
+    const keys = ['gestor_data_v2', 'projectManagerData'];
+    for (const key of keys) {
+        const raw = localStorage.getItem(key);
+        if (raw) return { key, raw };
+    }
+    return null;
+}
+
+function setFoundData(data, sourceLabel) {
+    foundData = data;
+    foundSource = sourceLabel || 'localStorage';
+    renderPreview(foundData, foundSource);
+    const status = document.getElementById('import-status');
+    status.style.display = 'block';
+    status.style.background = '#0f172a';
+    status.style.borderColor = '#334155';
+    status.textContent = `Respaldo listo desde ${sourceLabel || 'origen desconocido'}. Ya puedes migrarlo al servidor.`;
+    document.getElementById('backup-paste').style.display = 'block';
+    document.getElementById('paste-btn').style.display = 'block';
+}
+
+// Al cargar la página, analiza el localStorage
+window.onload = () => {
+    const backup = getLocalStorageBackup();
+    const exportBtn = document.getElementById('export-btn');
+    const backupInput = document.getElementById('backup-input');
+
+    backupInput.addEventListener('change', async (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        try {
+            const text = await file.text();
+            loadBackupText(text, `archivo ${file.name}`);
+        } finally {
+            event.target.value = '';
+        }
+    });
+
+    if (!backup) {
+        document.getElementById('warning-box').style.display = 'block';
+        document.getElementById('preview').style.display = 'none';
+        exportBtn.disabled = true;
+        return;
+    }
+
+    try {
+        const parsed = JSON.parse(backup.raw);
+        setFoundData(parsed, `origen ${backup.key}`);
+    } catch(e) {
+        document.getElementById('stats-badges').innerHTML = '<span style="color:#f43f5e">Error leyendo datos del localStorage</span>';
+    }
+};
+
+function loadBackupText(text, sourceLabel) {
+    const status = document.getElementById('import-status');
+    try {
+        const parsed = JSON.parse(text);
+        setFoundData(parsed, sourceLabel);
+        addLog(`Respaldo cargado: ${sourceLabel}`, 'ok');
+        status.style.display = 'block';
+        status.style.background = '#052e16';
+        status.style.borderColor = '#166534';
+        status.textContent = `Respaldo cargado correctamente desde ${sourceLabel}.`;
+        return true;
+    } catch (err) {
+        status.style.display = 'block';
+        status.style.background = '#3f1d1d';
+        status.style.borderColor = '#7f1d1d';
+        status.textContent = `No se pudo leer el JSON: ${err.message}`;
+        addLog(`Error leyendo respaldo: ${err.message}`, 'err');
+        alert('No se pudo leer el archivo JSON.');
+        return false;
+    }
+}
+
+function loadPastedBackup() {
+    const textarea = document.getElementById('backup-paste');
+    const text = textarea.value.trim();
+    if (!text) {
+        alert('Pega primero el JSON del respaldo.');
+        return;
+    }
+    loadBackupText(text, 'texto pegado');
+}
+
+function exportBackup() {
+    if (!foundData) {
+        alert('No hay datos cargados para exportar.');
+        return;
+    }
+
+    const payload = {
+        exportedAt: new Date().toISOString(),
+        source: foundSource,
+        app: 'GestorPro',
+        data: foundData
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const date = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `gestorpro-respaldo-${date}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    addLog('Respaldo JSON exportado correctamente.', 'ok');
+}
+
+async function migrate() {
+    if (!foundData) return;
+    const btn = document.getElementById('migrate-btn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Migrando...';
+
+    const source = foundData.data || foundData;
+    const projects  = source.projects  || [];
+    const finances  = source.finances  || [];
+    const notes     = source.notes     || [];
+    const activities= source.activities|| [];
+    const folders   = source.noteFolders || ['General','APIs','Contraseñas'];
+    const globalTimeSpent = source.globalTimeSpent || 0;
+
+    let total = projects.length + finances.length + notes.length + activities.length + 2;
+    let done  = 0;
+    const step = () => { done++; setProgress(Math.round((done/total)*100)); };
+
+    addLog(`Iniciando migración: ${total} registros totales`, 'info');
+
+    // --- CARPETAS ---
+    for (const f of folders) {
+        try {
+            await fetch(`${API}/folders`, {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ name: f })
+            });
+        } catch(e) {}
+    }
+    addLog(`Carpetas de notas: ${folders.length}`, 'ok');
+
+    // --- PROYECTOS Y TAREAS ---
+    for (const p of projects) {
+        try {
+            const pid = String(p.id);
+            await fetch(`${API}/projects`, {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({
+                    id: pid,
+                    name: p.name,
+                    status: p.status || 'lead',
+                    start_date: p.startDate || p.start_date || '',
+                    end_date: p.endDate || p.end_date || '',
+                    warranty_start: p.warrantyStart || p.warranty_start || '',
+                    warranty_end: p.warrantyEnd || p.warranty_end || ''
+                })
+            });
+            addLog(`✓ Proyecto: "${p.name}"`, 'ok');
+
+            // Tareas del proyecto
+            for (const t of (p.tasks || [])) {
+                try {
+                    await fetch(`${API}/tasks`, {
+                        method:'POST', headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({
+                            id: String(t.id),
+                            project_id: pid,
+                            title: t.title,
+                            description: t.description || '',
+                            status: t.status || 'todo',
+                            priority: t.priority || 'Media',
+                            due_date: t.dueDate || t.due_date || ''
+                        })
+                    });
+                } catch(e) { addLog(`  ⚠ Tarea fallida: ${t.title}`, 'err'); }
+            }
+            if (p.tasks && p.tasks.length) addLog(`  → ${p.tasks.length} tarea(s) migradas`, 'info');
+        } catch(e) {
+            addLog(`✗ Error proyecto "${p.name}": ${e.message}`, 'err');
+        }
+        step();
+    }
+
+    // --- FINANZAS ---
+    for (const f of finances) {
+        try {
+            await fetch(`${API}/finances`, {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({
+                    id: String(f.id),
+                    concept: f.concept,
+                    type: f.type,
+                    amount: f.amount,
+                    date: f.date || new Date().toISOString().split('T')[0]
+                })
+            });
+        } catch(e) { addLog(`⚠ Finanza fallida: ${f.concept}`, 'err'); }
+        step();
+    }
+    if (finances.length) addLog(`Finanzas migradas: ${finances.length}`, 'ok');
+
+    // --- NOTAS ---
+    for (const n of notes) {
+        try {
+            await fetch(`${API}/notes`, {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({
+                    id: String(n.id),
+                    title: n.title || 'Sin título',
+                    content: n.content || '',
+                    folder: n.folder || 'General',
+                    color: n.color || '#ffffff',
+                    created_at: n.createdAt || n.created_at || new Date().toISOString()
+                })
+            });
+        } catch(e) { addLog(`⚠ Nota fallida: ${n.title}`, 'err'); }
+        step();
+    }
+    if (notes.length) addLog(`Notas migradas: ${notes.length}`, 'ok');
+
+    // --- ACTIVIDADES ---
+    for (const a of activities) {
+        try {
+            await fetch(`${API}/activities`, {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({
+                    id: String(a.id || Date.now() + Math.random()),
+                    title: a.title || a.action || 'Actividad',
+                    desc: a.desc || a.description || '',
+                    date: a.date || new Date().toISOString()
+                })
+            });
+        } catch(e) {}
+        step();
+    }
+    if (activities.length) addLog(`Actividades migradas: ${activities.length}`, 'ok');
+
+    // --- TIMER ---
+    if (globalTimeSpent > 0) {
+        await fetch(`${API}/settings`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ key:'globalTimeSpent', value: globalTimeSpent })
+        });
+        addLog(`Timer guardado: ${globalTimeSpent}s`, 'ok');
+    }
+    step(); step();
+    setProgress(100);
+
+    addLog('🎉 ¡Migración completada exitosamente!', 'ok');
+    document.getElementById('success-msg').style.display = 'block';
+    document.getElementById('clear-btn').style.display = 'block';
+    btn.textContent = '✅ Completado';
+}
+
+function clearLocal() {
+    if (confirm('¿Eliminar los datos del localStorage? Asegúrate de haber verificado que la migración fue correcta antes de continuar.')) {
+        localStorage.removeItem('gestor_data_v2');
+        localStorage.removeItem('projectManagerData');
+        alert('localStorage limpiado correctamente.');
+        document.getElementById('clear-btn').style.display = 'none';
+    }
+}
+</script>
+</body>
+</html>

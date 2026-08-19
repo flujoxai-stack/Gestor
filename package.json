@@ -5,7 +5,8 @@
   "main": "database.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "import:supabase": "node scripts/import-local-sqlite-to-supabase.js"
   },
   "keywords": [],
   "author": "",
