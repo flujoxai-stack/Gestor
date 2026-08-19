@@ -1,17 +1,5 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/+esm';
-
-const SUPABASE_URL = 'https://gtphocpoywrjdkfoxspi.supabase.co';
-const SUPABASE_ANON_KEY =
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd0cGhvY3BveXdyamRrZm94c3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NTYxMTgsImV4cCI6MjA4NTEzMjExOH0.GGJ18RVeMWmCE2QNa_LkThdb1rtroIUssR0B3Z8zCBI';
 const ALLOWED_EMAIL = 'flujoxai@gmail.com';
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-    },
-});
+const SESSION_KEY = 'gestor_auth_session';
 
 const authScreen = document.getElementById('auth-screen');
 const appShell = document.getElementById('app-shell');
@@ -34,34 +22,66 @@ function setLocked(locked) {
     if (loginForm) loginForm.style.display = locked ? 'grid' : 'none';
 }
 
-async function applySession(session) {
+function saveSession(session) {
     if (session?.access_token) {
-        const email = String(session?.user?.email || '').toLowerCase();
-        if (email !== ALLOWED_EMAIL) {
-            await supabase.auth.signOut();
-            setMessage('Acceso denegado. Solo puede entrar flujoxai@gmail.com.', 'error');
-            setLocked(true);
-            return;
-        }
-
+        localStorage.setItem(SESSION_KEY, JSON.stringify(session));
         window.__GESTOR_ACCESS_TOKEN = session.access_token;
         window.__GESTOR_USER = session.user || null;
-        setLocked(false);
-        setMessage('');
-        if (typeof window.startGestorApp === 'function') {
-            await window.startGestorApp();
-        }
     } else {
+        localStorage.removeItem(SESSION_KEY);
         window.__GESTOR_ACCESS_TOKEN = '';
         window.__GESTOR_USER = null;
+    }
+}
+
+async function validateSession(session) {
+    if (!session?.access_token) return false;
+
+    const res = await fetch('/api/auth/me', {
+        headers: {
+            Authorization: `Bearer ${session.access_token}`,
+        },
+    });
+
+    if (!res.ok) return false;
+
+    const data = await res.json();
+    const email = String(data?.user?.email || '').toLowerCase();
+
+    if (email !== ALLOWED_EMAIL) return false;
+
+    return true;
+}
+
+async function applySession(session) {
+    if (!session?.access_token) {
+        saveSession(null);
         setLocked(true);
+        return;
+    }
+
+    const valid = await validateSession(session);
+    if (!valid) {
+        saveSession(null);
+        setMessage('Acceso denegado o sesión inválida.', 'error');
+        setLocked(true);
+        return;
+    }
+
+    saveSession(session);
+    setLocked(false);
+    setMessage('');
+
+    if (typeof window.startGestorApp === 'function') {
+        await window.startGestorApp();
     }
 }
 
 loginForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const email = document.getElementById('login-email').value.trim().toLowerCase();
-    const password = document.getElementById('login-password').value;
+
+    const email = String(document.getElementById('login-email').value || '').trim().toLowerCase();
+    const password = String(document.getElementById('login-password').value || '');
 
     if (email !== ALLOWED_EMAIL) {
         setMessage('Acceso denegado. Solo puede entrar flujoxai@gmail.com.', 'error');
@@ -71,40 +91,43 @@ loginForm?.addEventListener('submit', async (event) => {
     loginBtn.disabled = true;
     setMessage('Validando credenciales...', 'info');
 
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    try {
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+        });
 
-    loginBtn.disabled = false;
+        const data = await res.json().catch(() => ({}));
 
-    if (error) {
-        setMessage(error.message || 'No se pudo iniciar sesión.', 'error');
-        return;
+        if (!res.ok) {
+            setMessage(data.error || 'No se pudo iniciar sesión.', 'error');
+            return;
+        }
+
+        await applySession(data);
+    } catch (error) {
+        setMessage(error?.message || 'No se pudo iniciar sesión.', 'error');
+    } finally {
+        loginBtn.disabled = false;
     }
-
-    await applySession(data.session || null);
 });
 
 logoutBtn?.addEventListener('click', async () => {
-    logoutBtn.disabled = true;
-    await supabase.auth.signOut();
-    logoutBtn.disabled = false;
+    saveSession(null);
+    setLocked(true);
     window.location.reload();
 });
 
-supabase.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_OUT') {
-        await applySession(null);
-        return;
-    }
-
-    if (session) {
-        await applySession(session);
-    }
-});
-
 (async () => {
-    const { data } = await supabase.auth.getSession();
-    await applySession(data.session || null);
+    try {
+        const rawSession = localStorage.getItem(SESSION_KEY);
+        const session = rawSession ? JSON.parse(rawSession) : null;
+        await applySession(session);
+    } catch {
+        saveSession(null);
+        setLocked(true);
+    }
+
     window.__GESTOR_AUTH_READY = true;
 })();
-
-window.__GESTOR_AUTH_CLIENT = supabase;

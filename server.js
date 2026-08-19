@@ -32,6 +32,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 async function requireAuth(req, res, next) {
     if (req.method === 'OPTIONS') return next();
+    if (req.path === '/auth/login') return next();
 
     const authHeader = req.headers.authorization || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
@@ -68,6 +69,56 @@ async function requireAuth(req, res, next) {
 }
 
 app.use('/api', requireAuth);
+
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const email = String(req.body?.email || '').trim().toLowerCase();
+        const password = String(req.body?.password || '');
+
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email y contraseña son requeridos' });
+        }
+
+        if (AUTH_ALLOWED_EMAILS.length > 0 && !AUTH_ALLOWED_EMAILS.includes(email)) {
+            return res.status(403).json({ error: 'Acceso denegado' });
+        }
+
+        const loginRes = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+            method: 'POST',
+            headers: {
+                apikey: SUPABASE_AUTH_KEY,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password }),
+        });
+
+        const payload = await loginRes.json().catch(() => ({}));
+
+        if (!loginRes.ok) {
+            return res.status(loginRes.status).json({
+                error: payload?.msg || payload?.message || 'No se pudo iniciar sesión',
+            });
+        }
+
+        const userEmail = String(payload?.user?.email || '').toLowerCase();
+        if (AUTH_ALLOWED_EMAILS.length > 0 && !AUTH_ALLOWED_EMAILS.includes(userEmail)) {
+            return res.status(403).json({ error: 'Acceso denegado' });
+        }
+
+        return res.json(payload);
+    } catch (err) {
+        console.error('Login error:', err);
+        return res.status(500).json({ error: 'Login failed' });
+    }
+});
+
+app.get('/api/auth/me', async (req, res) => {
+    try {
+        return res.json({ user: req.user || null });
+    } catch (err) {
+        return res.status(500).json({ error: 'Auth check failed' });
+    }
+});
 
 async function getProjectsWithTasks() {
     const projects = await selectRows('projects', { order: 'pipeline_order.asc' });
