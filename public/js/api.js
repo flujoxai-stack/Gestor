@@ -5,7 +5,7 @@
 const API_URL = '/api';
 const nativeFetch = window.fetch.bind(window);
 
-async function fetch(input, options = {}) {
+async function apiFetch(input, options = {}) {
     const requestUrl = typeof input === 'string' ? input : input?.url || '';
     const headers = new Headers(options.headers || (input && input.headers ? input.headers : undefined));
     if (requestUrl.startsWith(API_URL) && window.__GESTOR_ACCESS_TOKEN) {
@@ -22,7 +22,7 @@ function genId() {
 const api = {
     // ---- STATE (carga completa de una vez) ----
     async getState() {
-        const res = await fetch(`${API_URL}/state`);
+        const res = await apiFetch(`${API_URL}/state`);
         if (!res.ok) throw new Error('Error cargando estado');
         return res.json();
     },
@@ -30,7 +30,7 @@ const api = {
     // ---- PROJECTS ----
     async createProject(data) {
         const id = genId();
-        const res = await fetch(`${API_URL}/projects`, {
+        const res = await apiFetch(`${API_URL}/projects`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...data, id: String(id) })
@@ -39,7 +39,7 @@ const api = {
         return { ...data, id: String(id), tasks: [] };
     },
     async updateProject(id, data) {
-        const res = await fetch(`${API_URL}/projects/${id}`, {
+        const res = await apiFetch(`${API_URL}/projects/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -48,7 +48,7 @@ const api = {
         return res.json();
     },
     async deleteProject(id) {
-        const res = await fetch(`${API_URL}/projects/${id}`, { method: 'DELETE' });
+        const res = await apiFetch(`${API_URL}/projects/${id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Error eliminando proyecto');
         return res.json();
     },
@@ -56,7 +56,7 @@ const api = {
     // ---- TASKS ----
     async createTask(projectId, taskData) {
         const id = genId();
-        const res = await fetch(`${API_URL}/tasks`, {
+        const res = await apiFetch(`${API_URL}/tasks`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -73,7 +73,7 @@ const api = {
         return { ...taskData, id: String(id), dueDate: taskData.dueDate || '' };
     },
     async updateTask(id, taskData) {
-        const res = await fetch(`${API_URL}/tasks/${id}`, {
+        const res = await apiFetch(`${API_URL}/tasks/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -88,7 +88,7 @@ const api = {
         return res.json();
     },
     async deleteTask(id) {
-        const res = await fetch(`${API_URL}/tasks/${id}`, { method: 'DELETE' });
+        const res = await apiFetch(`${API_URL}/tasks/${id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Error eliminando tarea');
         return res.json();
     },
@@ -96,7 +96,7 @@ const api = {
     // ---- FINANCES ----
     async createFinance(data) {
         const id = genId();
-        const res = await fetch(`${API_URL}/finances`, {
+        const res = await apiFetch(`${API_URL}/finances`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...data, id: String(id) })
@@ -105,7 +105,7 @@ const api = {
         return { ...data, id: String(id) };
     },
     async deleteFinance(id) {
-        const res = await fetch(`${API_URL}/finances/${id}`, { method: 'DELETE' });
+        const res = await apiFetch(`${API_URL}/finances/${id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Error eliminando movimiento');
         return res.json();
     },
@@ -114,7 +114,7 @@ const api = {
     async logActivity(title, desc) {
         const id = genId();
         const date = new Date().toISOString();
-        const res = await fetch(`${API_URL}/activities`, {
+        const res = await apiFetch(`${API_URL}/activities`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: String(id), title, desc: desc || '', date })
@@ -127,7 +127,7 @@ const api = {
     async createNote(data) {
         const id = genId();
         const created_at = new Date().toISOString();
-        const res = await fetch(`${API_URL}/notes`, {
+        const res = await apiFetch(`${API_URL}/notes`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...data, id: String(id), created_at })
@@ -136,7 +136,7 @@ const api = {
         return { ...data, id: String(id), created_at };
     },
     async updateNote(id, data) {
-        const res = await fetch(`${API_URL}/notes/${id}`, {
+        const res = await apiFetch(`${API_URL}/notes/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -145,14 +145,14 @@ const api = {
         return res.json();
     },
     async deleteNote(id) {
-        const res = await fetch(`${API_URL}/notes/${id}`, { method: 'DELETE' });
+        const res = await apiFetch(`${API_URL}/notes/${id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Error eliminando nota');
         return res.json();
     },
 
     // ---- FOLDERS ----
     async createFolder(name) {
-        const res = await fetch(`${API_URL}/folders`, {
+        const res = await apiFetch(`${API_URL}/folders`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name })
@@ -163,7 +163,7 @@ const api = {
 
     // ---- SETTINGS ----
     async saveSetting(key, value) {
-        const res = await fetch(`${API_URL}/settings`, {
+        const res = await apiFetch(`${API_URL}/settings`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ key, value })
