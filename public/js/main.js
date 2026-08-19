@@ -102,7 +102,9 @@ function renderActivityFeed() {
 // ========================================================
 // INICIALIZACIÓN (DOMContentLoaded)
 // ========================================================
-document.addEventListener('DOMContentLoaded', async () => {
+window.startGestorApp = async function startGestorApp() {
+    if (window.__GESTOR_APP_STARTED) return;
+    window.__GESTOR_APP_STARTED = true;
 
     const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
     document.getElementById('main-subtitle').textContent =
@@ -849,4 +851,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ---- INICIO ----
     showView('dashboard','Performance Overview','Resumen de datos');
     renderDashboard();
-});
+}
+
+if (window.__GESTOR_AUTH_READY && window.__GESTOR_ACCESS_TOKEN) {
+    window.startGestorApp().catch((error) => {
+        console.error('Error iniciando la app:', error);
+    });
+}

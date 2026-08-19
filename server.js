@@ -12,10 +12,62 @@ const {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const SUPABASE_AUTH_KEY =
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    '';
+const AUTH_ALLOWED_EMAILS = (process.env.AUTH_ALLOWED_EMAILS || '')
+    .split(',')
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+const AUTH_FALLBACK_EMAIL = 'flujoxai@gmail.com';
+if (AUTH_ALLOWED_EMAILS.length === 0) {
+    AUTH_ALLOWED_EMAILS.push(AUTH_FALLBACK_EMAIL);
+}
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+async function requireAuth(req, res, next) {
+    if (req.method === 'OPTIONS') return next();
+
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+
+    if (!token) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    try {
+        const authRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+            headers: {
+                apikey: SUPABASE_AUTH_KEY,
+                Authorization: `Bearer ${token}`,
+            },
+        });
+
+        if (!authRes.ok) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+
+        const user = await authRes.json();
+        const email = String(user.email || '').toLowerCase();
+
+        if (AUTH_ALLOWED_EMAILS.length > 0 && !AUTH_ALLOWED_EMAILS.includes(email)) {
+            return res.status(403).json({ error: 'Forbidden' });
+        }
+
+        req.user = user;
+        return next();
+    } catch (err) {
+        console.error('Auth middleware error:', err);
+        return res.status(500).json({ error: 'Authentication failed' });
+    }
+}
+
+app.use('/api', requireAuth);
 
 async function getProjectsWithTasks() {
     const projects = await selectRows('projects', { order: 'pipeline_order.asc' });

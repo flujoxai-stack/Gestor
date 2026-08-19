@@ -3,6 +3,16 @@
  */
 
 const API_URL = '/api';
+const nativeFetch = window.fetch.bind(window);
+
+async function fetch(input, options = {}) {
+    const requestUrl = typeof input === 'string' ? input : input?.url || '';
+    const headers = new Headers(options.headers || (input && input.headers ? input.headers : undefined));
+    if (requestUrl.startsWith(API_URL) && window.__GESTOR_ACCESS_TOKEN) {
+        headers.set('Authorization', `Bearer ${window.__GESTOR_ACCESS_TOKEN}`);
+    }
+    return nativeFetch(input, { ...options, headers });
+}
 
 // Genera un ID único tipo timestamp (compatible con el sistema original)
 function genId() {
