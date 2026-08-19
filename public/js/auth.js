@@ -19,8 +19,8 @@ function setLocked(locked) {
     document.body.dataset.auth = locked ? 'locked' : 'unlocked';
     if (authScreen) authScreen.style.display = locked ? 'flex' : 'none';
     if (appShell) appShell.style.display = locked ? 'none' : 'flex';
-    if (loginLogoutBtn) loginLogoutBtn.style.display = locked ? 'none' : 'inline-flex';
-    if (headerLogoutBtn) headerLogoutBtn.style.display = locked ? 'inline-flex' : 'none';
+    if (loginLogoutBtn) loginLogoutBtn.style.display = 'none';
+    if (headerLogoutBtn) headerLogoutBtn.style.display = locked ? 'none' : 'inline-flex';
     if (loginForm) loginForm.style.display = locked ? 'grid' : 'none';
 }
 
