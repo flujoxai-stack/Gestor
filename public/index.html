@@ -298,7 +298,12 @@
 
                 <!-- Pipeline View -->
                 <div id="pipeline-view" style="display: none;">
-                    <div class="d-flex justify-content-between align-items-center mb-3"><h4 class="mb-0 fw-semibold">Pipeline de Proyectos</h4></div>
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <h4 class="mb-0 fw-semibold">Pipeline de Proyectos</h4>
+                        <button class="btn btn-primary" style="background-color: var(--sidebar-active); border:none;" data-bs-toggle="modal" data-bs-target="#addProjectModal">
+                            + Nuevo Proyecto
+                        </button>
+                    </div>
                     <div class="kanban-board">
                         <div class="kanban-column"><div class="kanban-header kanban-header-todo"><h4>Prospecto</h4></div><div id="pipe-lead" class="task-list"></div></div>
                         <div class="kanban-column"><div class="kanban-header kanban-header-inprogress"><h4>Negociación</h4></div><div id="pipe-negotiation" class="task-list"></div></div>
