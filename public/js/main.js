@@ -932,18 +932,18 @@ window.startGestorApp = async function startGestorApp() {
         const filtered=state.notes.filter(n=>n.folder===currentNoteFolder);
         filtered.forEach(n=>{
             const div=document.createElement('div');
-            div.className = 'note-card';
-            div.style.background = n.color || '#fff';
+            div.className = 'note-folder-card';
             div.innerHTML = `
-                <div class="note-card-top">
+                <div class="note-folder-card-tab"></div>
+                <div class="note-folder-card-top">
                     <div class="note-folder-icon">📁</div>
                     <button class="btn-action-icon btn-action-delete" onclick="deleteNote('${n.id}',event)">🗑️</button>
                 </div>
-                <div class="note-card-body">
-                    <strong class="note-card-title">${n.title}</strong>
-                    <span class="note-card-folder">${n.folder || 'General'}</span>
+                <div class="note-folder-card-body">
+                    <strong class="note-folder-card-title">${n.title}</strong>
+                    <span class="note-folder-card-folder">${n.folder || 'General'}</span>
                 </div>
-                <div class="note-card-footer">Abrir nota</div>`;
+                <div class="note-folder-card-footer">Abrir nota</div>`;
             div.onclick=()=>openEditNote(n);
             list.appendChild(div);
         });
