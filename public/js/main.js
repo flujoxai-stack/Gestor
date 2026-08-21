@@ -672,7 +672,11 @@ window.startGestorApp = async function startGestorApp() {
 
     // ---- FINANZAS ----
     function renderFinances() {
-        const tbody=document.getElementById('finances-table-body'); if(!tbody)return; tbody.innerHTML='';
+        const tbody =
+            document.getElementById('finance-table-body') ||
+            document.getElementById('finances-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
         let inc=0,exp=0;
         state.finances.forEach(f=>{
             if(f.type==='income')inc+=parseFloat(f.amount);else exp+=parseFloat(f.amount);
@@ -680,9 +684,12 @@ window.startGestorApp = async function startGestorApp() {
             tr.innerHTML=`<td>${f.concept}</td><td><span class="metric-badge" style="background:${f.type==='income'?'rgba(16,185,129,0.1)':'rgba(244,63,94,0.1)'};color:${f.type==='income'?'#10b981':'#f43f5e'}">${f.type==='income'?'Ingreso':'Gasto'}</span></td><td style="color:${f.type==='income'?'#10b981':'#f43f5e'};font-weight:600;">${f.type==='income'?'+':'-'}$${parseFloat(f.amount).toFixed(2)}</td><td>${f.date}</td><td><button class="btn-action-icon btn-action-delete" onclick="deleteFinance('${f.id}')">🗑️</button></td>`;
             tbody.appendChild(tr);
         });
-        if(document.getElementById('fin-inc'))document.getElementById('fin-inc').textContent=`$${inc.toFixed(2)}`;
-        if(document.getElementById('fin-exp'))document.getElementById('fin-exp').textContent=`$${exp.toFixed(2)}`;
-        if(document.getElementById('fin-bal'))document.getElementById('fin-bal').textContent=`$${(inc-exp).toFixed(2)}`;
+        const incomeEl = document.getElementById('fin-income') || document.getElementById('fin-inc');
+        const expenseEl = document.getElementById('fin-expense') || document.getElementById('fin-exp');
+        const balanceEl = document.getElementById('fin-balance') || document.getElementById('fin-bal');
+        if (incomeEl) incomeEl.textContent = `$${inc.toFixed(2)}`;
+        if (expenseEl) expenseEl.textContent = `$${exp.toFixed(2)}`;
+        if (balanceEl) balanceEl.textContent = `$${(inc-exp).toFixed(2)}`;
     }
 
     const addFinanceModal=new bootstrap.Modal(document.getElementById('addFinanceModal'));
