@@ -16,6 +16,7 @@ let state = {
     activities: [],
     notes: [],
     noteFolders: ['General', 'APIs', 'Contraseñas'],
+    noteFolderColors: {},
     globalTimeSpent: 0
 };
 
@@ -34,6 +35,7 @@ async function loadState() {
         state.activities     = data.activities     || [];
         state.notes          = data.notes          || [];
         state.noteFolders    = data.noteFolders    || ['General', 'APIs', 'Contraseñas'];
+        state.noteFolderColors = data.noteFolderColors || {};
         state.globalTimeSpent = data.globalTimeSpent || 0;
         state.currentProjectId = data.currentProjectId || 
             (state.projects.length > 0 ? state.projects[0].id : null);
@@ -45,6 +47,7 @@ async function loadState() {
         if (!state.activities)  state.activities = [];
         if (!state.notes)       state.notes = [];
         if (!state.noteFolders) state.noteFolders = ['General','APIs','Contraseñas'];
+        if (!state.noteFolderColors) state.noteFolderColors = {};
     }
 }
 
@@ -912,15 +915,40 @@ window.startGestorApp = async function startGestorApp() {
     }
     window.renderDatabase = renderDatabase;
 
-    // ---- NOTAS ----
-    let currentNoteFolder = 'General';
+// ---- NOTAS ----
+let currentNoteFolder = 'General';
 
-    function renderNoteFolderTabs() {
+const folderPalette = ['#6e48c1', '#0f9bd7', '#10b981', '#f97316', '#ec4899', '#ef4444', '#14b8a6', '#8b5cf6'];
+
+function fallbackFolderColor(name) {
+    const key = String(name || 'General').toLowerCase();
+    let hash = 0;
+    for (let i = 0; i < key.length; i++) {
+        hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+    }
+    return folderPalette[hash % folderPalette.length];
+}
+
+function getFolderColor(name) {
+    return state.noteFolderColors?.[name] || fallbackFolderColor(name);
+}
+
+function setNoteColorDefault(folderName) {
+    const input = document.getElementById('note-color-input');
+    if (!input) return;
+    const color = getFolderColor(folderName);
+    input.value = color;
+    input.dataset.defaultColor = color;
+}
+
+function renderNoteFolderTabs() {
         const tabs=document.getElementById('notes-folders-tabs'); if(!tabs)return; tabs.innerHTML='';
         state.noteFolders.forEach(f=>{
             const btn=document.createElement('button');
-            btn.className=`btn btn-sm ${f===currentNoteFolder?'btn-primary':'btn-outline-secondary'}`;
-            btn.style.cssText='border-radius:20px;font-size:0.8rem;white-space:nowrap;';
+            const folderColor = getFolderColor(f);
+            btn.className='btn btn-sm note-folder-tab';
+            btn.style.setProperty('--folder-accent', folderColor);
+            btn.classList.toggle('active', f===currentNoteFolder);
             btn.textContent=f;
             btn.onclick=()=>{ currentNoteFolder=f; renderNoteFolderTabs(); renderNotesList(); };
             tabs.appendChild(btn);
@@ -933,6 +961,7 @@ window.startGestorApp = async function startGestorApp() {
         filtered.forEach(n=>{
             const div=document.createElement('div');
             div.className = 'note-folder-card';
+            div.style.setProperty('--note-accent', n.color || getFolderColor(n.folder) || '#6e48c1');
             div.innerHTML = `
                 <div class="note-folder-card-tab"></div>
                 <div class="note-folder-card-top">
@@ -968,8 +997,8 @@ window.startGestorApp = async function startGestorApp() {
         document.getElementById('note-id-input').value='';
         document.getElementById('note-title-input').value='';
         document.getElementById('note-content-input').value='';
-        document.getElementById('note-color-input').value='#ffffff';
         populateFolderSelect();
+        setNoteColorDefault(currentNoteFolder);
         addNoteModal.show();
     };
 
@@ -977,9 +1006,10 @@ window.startGestorApp = async function startGestorApp() {
         document.getElementById('note-id-input').value=n.id;
         document.getElementById('note-title-input').value=n.title;
         document.getElementById('note-content-input').value=n.content||'';
-        document.getElementById('note-color-input').value=n.color||'#ffffff';
         populateFolderSelect();
         document.getElementById('note-folder-input').value=n.folder||'General';
+        setNoteColorDefault(n.folder||'General');
+        document.getElementById('note-color-input').value=n.color||getFolderColor(n.folder||'General')||'#6e48c1';
         addNoteModal.show();
     }
 
@@ -1021,13 +1051,22 @@ window.startGestorApp = async function startGestorApp() {
     window.promptNewFolder=async function(){
         const name=prompt('Nombre de la nueva carpeta:');
         if(name&&name.trim()&&!state.noteFolders.includes(name.trim())){
+            const normalizedName = name.trim();
+            const defaultColor = getFolderColor(normalizedName);
+            const color = (prompt('Color de la carpeta en hex (#6e48c1):', defaultColor) || defaultColor).trim() || defaultColor;
             try {
-                await api.createFolder(name.trim());
-                state.noteFolders.push(name.trim());
+                await api.createFolder(normalizedName, color);
+                state.noteFolders.push(normalizedName);
+                state.noteFolderColors[normalizedName] = color;
+                await api.saveSetting('noteFolderColors', JSON.stringify(state.noteFolderColors));
                 renderNoteFolderTabs();
             } catch(e){ alert('Error al crear carpeta: '+e.message); }
         }
     };
+
+    document.getElementById('note-folder-input').addEventListener('change', (event) => {
+        setNoteColorDefault(event.target.value);
+    });
 
     // ---- COPILOT ----
     window.openCopilotDemo=function(){

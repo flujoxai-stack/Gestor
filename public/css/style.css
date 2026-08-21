@@ -324,13 +324,59 @@ body[data-auth="locked"] {
         .add-task-inline { background: none; border: none; color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem 1rem; text-align: left; cursor: pointer; width: 100%; font-weight: 500;}
         .add-task-inline:hover { color: var(--sidebar-active); }
         .btn-floating-primary { position: fixed; bottom: 2.5rem; right: 2.5rem; background-color: var(--sidebar-active); color: white; border: none; border-radius: 25px; padding: 0.8rem 1.5rem; font-weight: 500; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(110, 72, 193, 0.4); z-index: 100; cursor: pointer; }
+        .note-folder-tab {
+            position: relative;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--folder-accent) 35%, var(--border-color) 65%);
+            background: color-mix(in srgb, var(--folder-accent) 10%, var(--card-bg) 90%);
+            color: var(--text-main);
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.48rem 0.95rem 0.48rem 0.8rem;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+        }
+        .note-folder-tab::before {
+            content: '';
+            width: 0.55rem;
+            height: 0.55rem;
+            border-radius: 999px;
+            background: var(--folder-accent);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--folder-accent) 12%, transparent);
+            flex-shrink: 0;
+        }
+        .note-folder-tab:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+        }
+        .note-folder-tab.active {
+            background: var(--folder-accent);
+            border-color: var(--folder-accent);
+            color: #fff;
+            box-shadow: 0 10px 20px color-mix(in srgb, var(--folder-accent) 35%, transparent);
+        }
+        .note-folder-tab.active::before {
+            background: #fff;
+            box-shadow: none;
+        }
+        body[data-theme="dark"] .note-folder-tab {
+            background: color-mix(in srgb, var(--folder-accent) 16%, var(--card-bg) 84%);
+            border-color: color-mix(in srgb, var(--folder-accent) 45%, var(--border-color) 55%);
+        }
         .note-folder-card {
             position: relative;
             border-radius: 10px 10px 16px 16px;
             padding: 1rem 1rem 0.95rem;
-            border: 1px solid #d7b94a;
+            --note-accent: #6e48c1;
+            --note-accent-soft: color-mix(in srgb, var(--note-accent) 28%, #ffffff 72%);
+            --note-accent-strong: color-mix(in srgb, var(--note-accent) 72%, #ffffff 28%);
+            --note-accent-border: color-mix(in srgb, var(--note-accent) 58%, #b9b0d1 42%);
+            border: 1px solid var(--note-accent-border);
             background:
-                linear-gradient(180deg, #fff2a3 0%, #ffe784 18%, #fff 18%);
+                linear-gradient(180deg, var(--note-accent-soft) 0%, var(--note-accent-strong) 18%, #fff 18%);
             box-shadow: 0 10px 25px rgba(0,0,0,0.06);
             cursor: pointer;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -341,8 +387,8 @@ body[data-auth="locked"] {
             overflow: hidden;
         }
         body[data-theme="dark"] .note-folder-card {
-            background: linear-gradient(180deg, #5c4c12 0%, #8c741c 18%, var(--card-bg) 18%);
-            border-color: #8c741c;
+            background: linear-gradient(180deg, color-mix(in srgb, var(--note-accent) 26%, #000 74%) 0%, color-mix(in srgb, var(--note-accent) 56%, #000 44%) 18%, var(--card-bg) 18%);
+            border-color: color-mix(in srgb, var(--note-accent) 60%, #222 40%);
         }
         .note-folder-card:hover {
             transform: translateY(-3px);
@@ -355,7 +401,7 @@ body[data-auth="locked"] {
             width: 44%;
             height: 20px;
             border-radius: 14px 14px 0 0;
-            background: linear-gradient(180deg, #ffeaa8 0%, #f7c948 100%);
+            background: linear-gradient(180deg, color-mix(in srgb, var(--note-accent) 38%, #ffffff 62%) 0%, color-mix(in srgb, var(--note-accent) 72%, #ffffff 28%) 100%);
             box-shadow: inset 0 -1px 0 rgba(255,255,255,0.45);
         }
         .note-folder-card-top {
@@ -372,8 +418,9 @@ body[data-auth="locked"] {
             align-items: center;
             justify-content: center;
             border-radius: 10px;
-            background: rgba(255, 216, 102, 0.38);
-            color: #8a6b00;
+            background: color-mix(in srgb, var(--note-accent) 18%, transparent);
+            color: var(--note-accent);
+            border: 1px solid color-mix(in srgb, var(--note-accent) 30%, transparent);
             flex-shrink: 0;
         }
         .note-folder-card-body {
@@ -398,9 +445,9 @@ body[data-auth="locked"] {
         .note-folder-card-footer {
             margin-top: 1rem;
             font-size: 0.8rem;
-            color: #8a6b00;
+            color: var(--note-accent);
             font-weight: 600;
-            border-top: 1px dashed rgba(160, 122, 0, 0.28);
+            border-top: 1px dashed color-mix(in srgb, var(--note-accent) 28%, transparent);
             padding-top: 0.65rem;
         }
         ::-webkit-scrollbar { width: 4px; height: 4px; }

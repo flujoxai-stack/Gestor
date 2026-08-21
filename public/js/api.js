@@ -151,11 +151,11 @@ const api = {
     },
 
     // ---- FOLDERS ----
-    async createFolder(name) {
+    async createFolder(name, color) {
         const res = await apiFetch(`${API_URL}/folders`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name })
+            body: JSON.stringify({ name, color })
         });
         if (!res.ok) throw new Error('Error creando carpeta');
         return res.json();

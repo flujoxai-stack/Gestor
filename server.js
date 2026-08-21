@@ -142,6 +142,15 @@ app.get('/api/state', async (req, res) => {
         const notes = await selectRows('notes', { order: 'created_at.desc' });
         const folders = await selectRows('note_folders', { columns: 'name' });
         const timeSetting = await selectOneRow('settings', { filters: { key: 'globalTimeSpent' } });
+        const folderColorsSetting = await selectOneRow('settings', { filters: { key: 'noteFolderColors' } });
+        let noteFolderColors = {};
+        if (folderColorsSetting && folderColorsSetting.value) {
+            try {
+                noteFolderColors = JSON.parse(folderColorsSetting.value) || {};
+            } catch {
+                noteFolderColors = {};
+            }
+        }
 
         res.json({
             projects,
@@ -150,6 +159,7 @@ app.get('/api/state', async (req, res) => {
             activities,
             notes,
             noteFolders: folders.map((f) => f.name),
+            noteFolderColors,
             globalTimeSpent: timeSetting ? parseInt(timeSetting.value, 10) || 0 : 0,
         });
     } catch (err) {
