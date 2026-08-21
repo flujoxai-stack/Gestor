@@ -235,6 +235,7 @@ window.startGestorApp = async function startGestorApp() {
 
     // ---- CHARTS ----
     let barChart, pieChart, areaChart, radarChart, polarChart;
+    let reportsPipelineChart, reportsProfitChart;
     Chart.defaults.font.family = "'Outfit', sans-serif";
 
     function renderDashboard() {
@@ -757,16 +758,72 @@ window.startGestorApp = async function startGestorApp() {
 
     // ---- REPORTES ----
     function renderReports() {
-        let tTotal=0,tDone=0,tPend=0;
-        state.projects.forEach(p=>{p.tasks.forEach(t=>{tTotal++;if(t.status==='done')tDone++;else tPend++;});});
+        let lead=0, negotiation=0, execution=0, delivered=0;
+        state.projects.forEach((p) => {
+            if (p.status === 'lead') lead++;
+            else if (p.status === 'negotiation') negotiation++;
+            else if (p.status === 'execution') execution++;
+            else if (p.status === 'delivered') delivered++;
+        });
+
         let inc=0,exp=0;
         state.finances.forEach(f=>{if(f.type==='income')inc+=parseFloat(f.amount);else exp+=parseFloat(f.amount);});
-        if(document.getElementById('rep-total'))document.getElementById('rep-total').textContent=tTotal;
-        if(document.getElementById('rep-done'))document.getElementById('rep-done').textContent=tDone;
-        if(document.getElementById('rep-pend'))document.getElementById('rep-pend').textContent=tPend;
-        if(document.getElementById('rep-inc'))document.getElementById('rep-inc').textContent=`$${inc.toFixed(2)}`;
-        if(document.getElementById('rep-exp'))document.getElementById('rep-exp').textContent=`$${exp.toFixed(2)}`;
-        if(document.getElementById('rep-bal'))document.getElementById('rep-bal').textContent=`$${(inc-exp).toFixed(2)}`;
+
+        const reportPipelineCanvas = document.getElementById('reportsPipelineChart');
+        const reportProfitCanvas = document.getElementById('reportsProfitChart');
+        if (!reportPipelineCanvas || !reportProfitCanvas) return;
+
+        const txtColor=document.body.dataset.theme==='dark'?'#fff':'#8b8e99';
+        const gridColor=document.body.dataset.theme==='dark'?'#333':'#f1f2f6';
+
+        if (reportsPipelineChart) reportsPipelineChart.destroy();
+        reportsPipelineChart = new Chart(reportPipelineCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['Prospecto', 'Negociación', 'Ejecución', 'Entregado'],
+                datasets: [{
+                    data: [lead, negotiation, execution, delivered],
+                    backgroundColor: ['#2dd4bf', '#60a5fa', '#f59e0b', '#10b981'],
+                    borderWidth: 0,
+                    cutout: '72%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: txtColor }
+                    }
+                }
+            }
+        });
+
+        if (reportsProfitChart) reportsProfitChart.destroy();
+        reportsProfitChart = new Chart(reportProfitCanvas, {
+            type: 'bar',
+            data: {
+                labels: ['Ingresos', 'Gastos', 'Balance'],
+                datasets: [{
+                    label: 'Monto',
+                    data: [inc, exp, inc - exp],
+                    backgroundColor: ['#10b981', '#f43f5e', '#6e48c1'],
+                    borderRadius: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: txtColor } },
+                    y: { grid: { color: gridColor }, ticks: { color: txtColor } }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
     }
 
     // ---- BASE DE DATOS (vista tabla) ----
