@@ -470,6 +470,7 @@ window.startGestorApp = async function startGestorApp() {
                     state.currentProjectId=state.projects.length>0?state.projects[0].id:null;
                 }
                 renderProjectsList();
+                if (navLinks.pipeline.classList.contains('active')) renderPipeline();
                 if(navLinks.dashboard.classList.contains('active'))renderDashboard();
             } catch(e){ alert('Error al eliminar el proyecto: '+e.message); }
         }
@@ -492,6 +493,7 @@ window.startGestorApp = async function startGestorApp() {
             document.getElementById('new-project-start').value='';
             document.getElementById('new-project-end').value='';
             renderProjectsList();
+            if (navLinks.pipeline.classList.contains('active')) renderPipeline();
             if(navLinks.dashboard.classList.contains('active'))renderDashboard();
         } catch(e){ alert('Error al crear proyecto: '+e.message); }
     });
@@ -930,8 +932,18 @@ window.startGestorApp = async function startGestorApp() {
         const filtered=state.notes.filter(n=>n.folder===currentNoteFolder);
         filtered.forEach(n=>{
             const div=document.createElement('div');
-            div.style.cssText=`background:${n.color||'#fff'};border-radius:12px;padding:1rem;border:1px solid var(--border-color);cursor:pointer;transition:box-shadow 0.2s;`;
-            div.innerHTML=`<div style="display:flex;justify-content:space-between;margin-bottom:0.5rem;"><strong style="color:#333;">${n.title}</strong><button class="btn-action-icon btn-action-delete" onclick="deleteNote('${n.id}',event)">🗑️</button></div><p style="font-size:0.8rem;color:#555;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:pre-wrap;max-height:80px;">${n.content||''}</p>`;
+            div.className = 'note-card';
+            div.style.background = n.color || '#fff';
+            div.innerHTML = `
+                <div class="note-card-top">
+                    <div class="note-folder-icon">📁</div>
+                    <button class="btn-action-icon btn-action-delete" onclick="deleteNote('${n.id}',event)">🗑️</button>
+                </div>
+                <div class="note-card-body">
+                    <strong class="note-card-title">${n.title}</strong>
+                    <span class="note-card-folder">${n.folder || 'General'}</span>
+                </div>
+                <div class="note-card-footer">Abrir nota</div>`;
             div.onclick=()=>openEditNote(n);
             list.appendChild(div);
         });

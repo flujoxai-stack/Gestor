@@ -324,6 +324,62 @@ body[data-auth="locked"] {
         .add-task-inline { background: none; border: none; color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem 1rem; text-align: left; cursor: pointer; width: 100%; font-weight: 500;}
         .add-task-inline:hover { color: var(--sidebar-active); }
         .btn-floating-primary { position: fixed; bottom: 2.5rem; right: 2.5rem; background-color: var(--sidebar-active); color: white; border: none; border-radius: 25px; padding: 0.8rem 1.5rem; font-weight: 500; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(110, 72, 193, 0.4); z-index: 100; cursor: pointer; }
+        .note-card {
+            border-radius: 18px;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            min-height: 150px;
+            overflow: hidden;
+        }
+        .note-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        .note-card-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        .note-folder-icon {
+            width: 42px;
+            height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            background: rgba(110, 72, 193, 0.12);
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+        .note-card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            flex: 1;
+        }
+        .note-card-title {
+            color: var(--text-main);
+            font-size: 1rem;
+            line-height: 1.2;
+        }
+        .note-card-folder {
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .note-card-footer {
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: var(--sidebar-active);
+            font-weight: 600;
+        }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 4px; }
