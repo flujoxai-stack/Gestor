@@ -99,6 +99,25 @@ function renderActivityFeed() {
     }
 }
 
+let currentDbTab = 'projects';
+
+function updateDbTabButtons() {
+    const tabs = ['projects', 'finances', 'activities'];
+    tabs.forEach((tab) => {
+        const btn = document.getElementById(`db-tab-${tab}`);
+        if (!btn) return;
+        btn.classList.toggle('active', tab === currentDbTab);
+    });
+}
+
+window.switchDbTab = function switchDbTab(tab) {
+    currentDbTab = tab || 'projects';
+    updateDbTabButtons();
+    if (typeof window.renderDatabase === 'function') {
+        window.renderDatabase();
+    }
+};
+
 // ========================================================
 // INICIALIZACIÓN (DOMContentLoaded)
 // ========================================================
@@ -752,15 +771,87 @@ window.startGestorApp = async function startGestorApp() {
 
     // ---- BASE DE DATOS (vista tabla) ----
     function renderDatabase() {
-        const tbody=document.getElementById('db-table-body'); if(!tbody)return; tbody.innerHTML='';
-        state.projects.forEach(p=>{
-            p.tasks.forEach(t=>{
-                const tr=document.createElement('tr');
-                tr.innerHTML=`<td>${p.name}</td><td>${t.title}</td><td><span class="metric-badge">${t.status}</span></td><td><span class="priority-badge priority-${t.priority}">${t.priority}</span></td><td>${t.dueDate||'--'}</td>`;
+        const thead = document.getElementById('db-thead');
+        const tbody = document.getElementById('db-tbody');
+        if (!thead || !tbody) return;
+
+        tbody.innerHTML = '';
+        updateDbTabButtons();
+
+        if (currentDbTab === 'projects') {
+            thead.innerHTML = `
+                <tr>
+                    <th>Proyecto</th>
+                    <th>Tarea</th>
+                    <th>Estado</th>
+                    <th>Prioridad</th>
+                    <th>Vence</th>
+                </tr>`;
+            state.projects.forEach(p => {
+                p.tasks.forEach(t => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${p.name}</td>
+                        <td>${t.title}</td>
+                        <td><span class="metric-badge">${t.status}</span></td>
+                        <td><span class="priority-badge priority-${t.priority}">${t.priority}</span></td>
+                        <td>${t.dueDate || '--'}</td>`;
+                    tbody.appendChild(tr);
+                });
+            });
+            if (!tbody.children.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-muted">No hay proyectos o tareas para mostrar.</td></tr>';
+            }
+            return;
+        }
+
+        if (currentDbTab === 'finances') {
+            thead.innerHTML = `
+                <tr>
+                    <th>Concepto</th>
+                    <th>Tipo</th>
+                    <th>Monto</th>
+                    <th>Fecha</th>
+                    <th>Proyecto</th>
+                </tr>`;
+            state.finances.forEach(f => {
+                const tr = document.createElement('tr');
+                const project = state.projects.find((p) => String(p.id) === String(f.project_id));
+                tr.innerHTML = `
+                    <td>${f.concept}</td>
+                    <td><span class="metric-badge" style="background:${f.type === 'income' ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)'};color:${f.type === 'income' ? '#10b981' : '#f43f5e'}">${f.type === 'income' ? 'Ingreso' : 'Gasto'}</span></td>
+                    <td style="font-weight:600;color:${f.type === 'income' ? '#10b981' : '#f43f5e'}">${f.type === 'income' ? '+' : '-'}$${parseFloat(f.amount).toFixed(2)}</td>
+                    <td>${f.date}</td>
+                    <td>${project ? project.name : '--'}</td>`;
                 tbody.appendChild(tr);
             });
-        });
+            if (!tbody.children.length) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-muted">No hay movimientos registrados.</td></tr>';
+            }
+            return;
+        }
+
+        if (currentDbTab === 'activities') {
+            thead.innerHTML = `
+                <tr>
+                    <th>Título</th>
+                    <th>Descripción</th>
+                    <th>Fecha</th>
+                </tr>`;
+            state.activities.forEach(a => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${a.title}</td>
+                    <td>${a.desc || ''}</td>
+                    <td>${a.date || '--'}</td>`;
+                tbody.appendChild(tr);
+            });
+            if (!tbody.children.length) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-muted">No hay actividad para mostrar.</td></tr>';
+            }
+        }
     }
+    window.renderDatabase = renderDatabase;
 
     // ---- NOTAS ----
     let currentNoteFolder = 'General';
