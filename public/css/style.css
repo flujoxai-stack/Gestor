@@ -336,8 +336,8 @@ body[data-auth="locked"] {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             display: flex;
             flex-direction: column;
-            min-height: 170px;
-            min-width: 220px;
+            min-height: 176px;
+            min-width: 240px;
             overflow: hidden;
         }
         body[data-theme="dark"] .note-folder-card {
@@ -346,13 +346,13 @@ body[data-auth="locked"] {
         }
         .note-folder-card:hover {
             transform: translateY(-3px);
-            box-shadow: 0 14px 30px rgba(0,0,0,0.08);
+            box-shadow: 0 16px 36px rgba(0,0,0,0.14);
         }
         .note-folder-card-tab {
             position: absolute;
             top: -1px;
             left: 16px;
-            width: 38%;
+            width: 44%;
             height: 20px;
             border-radius: 14px 14px 0 0;
             background: linear-gradient(180deg, #ffeaa8 0%, #f7c948 100%);
@@ -373,7 +373,7 @@ body[data-auth="locked"] {
             justify-content: center;
             border-radius: 10px;
             background: rgba(255, 216, 102, 0.38);
-            font-size: 1.25rem;
+            color: #8a6b00;
             flex-shrink: 0;
         }
         .note-folder-card-body {

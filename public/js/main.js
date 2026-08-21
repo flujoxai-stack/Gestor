@@ -936,7 +936,12 @@ window.startGestorApp = async function startGestorApp() {
             div.innerHTML = `
                 <div class="note-folder-card-tab"></div>
                 <div class="note-folder-card-top">
-                    <div class="note-folder-icon">📁</div>
+                    <div class="note-folder-icon" aria-hidden="true">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <path d="M3 9h18"></path>
+                        </svg>
+                    </div>
                     <button class="btn-action-icon btn-action-delete" onclick="deleteNote('${n.id}',event)">🗑️</button>
                 </div>
                 <div class="note-folder-card-body">
