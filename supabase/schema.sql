@@ -54,12 +54,35 @@ create table if not exists public.settings (
     value text
 );
 
+create table if not exists public.integrations (
+    id text primary key,
+    name text not null,
+    type text not null default 'webhook',
+    enabled boolean not null default true,
+    config text not null default '{}',
+    created_at text not null,
+    updated_at text not null
+);
+
+create table if not exists public.integration_events (
+    id text primary key,
+    integration_id text references public.integrations(id) on delete cascade,
+    event_type text not null,
+    payload text,
+    status text not null default 'sent',
+    response text,
+    created_at text not null
+);
+
 create index if not exists tasks_project_id_idx on public.tasks (project_id);
 create index if not exists tasks_status_idx on public.tasks (status);
 create index if not exists finances_date_idx on public.finances (date desc);
 create index if not exists activities_date_idx on public.activities (date desc);
 create index if not exists notes_created_at_idx on public.notes (created_at desc);
 create index if not exists projects_pipeline_order_idx on public.projects (pipeline_order asc);
+create index if not exists integrations_updated_at_idx on public.integrations (updated_at desc);
+create index if not exists integration_events_created_at_idx on public.integration_events (created_at desc);
+create index if not exists integration_events_integration_id_idx on public.integration_events (integration_id);
 
 insert into public.note_folders (name)
 values ('General'), ('APIs'), ('Contraseñas')
@@ -73,5 +96,7 @@ grant select, insert, update, delete on
     public.activities,
     public.notes,
     public.note_folders,
-    public.settings
+    public.settings,
+    public.integrations,
+    public.integration_events
 to anon, authenticated;

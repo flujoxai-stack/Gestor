@@ -67,6 +67,7 @@
                 <li class="nav-item"><a href="#" class="nav-link" id="nav-reports"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Reportes</a></li>
                 <li class="nav-item"><a href="#" class="nav-link" id="nav-database"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg> Base de Datos</a></li>
                 <li class="nav-item"><a href="#" class="nav-link" id="nav-notes"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg> Notas</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" id="nav-integrations"><svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M4 12h16"></path></svg> Integraciones</a></li>
             </ul>
 
             <div class="nav-section-title mt-4">TOOLS</div>
@@ -354,6 +355,35 @@
                     </div>
                 </div>
 
+                <!-- Integrations View -->
+                <div id="integrations-view" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <div>
+                            <h4 class="mb-0 fw-semibold">Integraciones</h4>
+                            <p class="text-muted mb-0 small">Conecta GestorPro con CRM, automatizadores, correo y webhooks.</p>
+                        </div>
+                        <button class="btn btn-primary" style="background-color: var(--sidebar-active); border:none;" onclick="openIntegrationModal()">+ Nueva Integración</button>
+                    </div>
+                    <div class="dash-grid" style="margin-bottom:1.5rem;">
+                        <div class="dash-card metric-card primary"><div class="metric-header"><div class="metric-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M4 12h16"></path></svg></div></div><div class="metric-body"><h4>Integraciones</h4><h2 id="integration-count">0</h2></div></div>
+                        <div class="dash-card metric-card"><div class="metric-header"><div class="metric-icon" style="color: #10b981; background: rgba(16,185,129,0.1);"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div></div><div class="metric-body"><h4>Activas</h4><h2 id="integration-enabled-count">0</h2></div></div>
+                        <div class="dash-card metric-card"><div class="metric-header"><div class="metric-icon" style="color: #ef4444; background: rgba(239,68,68,0.1);"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div></div><div class="metric-body"><h4>Eventos recientes</h4><h2 id="integration-event-count">0</h2></div></div>
+                    </div>
+                    <div class="dash-card mb-4">
+                        <div class="chart-header"><div><h3>Webhooks y conectores</h3><p>Un punto único para automatizar el CRM</p></div></div>
+                        <div id="integration-list" class="row row-cols-1 row-cols-md-2 g-4"></div>
+                    </div>
+                    <div class="dash-card">
+                        <div class="chart-header"><div><h3>Eventos de Integración</h3><p>Últimos envíos y respuestas</p></div></div>
+                        <div class="table-responsive">
+                            <table class="table" style="color: var(--text-main);">
+                                <thead><tr><th>Fecha</th><th>Integración</th><th>Evento</th><th>Estado</th><th>Respuesta</th></tr></thead>
+                                <tbody id="integration-events-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
             </div>
             <button class="btn-floating-primary" id="fab-add-task">+ Nueva Tarea</button>
         </main>
@@ -364,6 +394,59 @@
     <div class="modal fade" id="editWarrantyModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-semibold">Asignar Garantía</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="warranty-project-id"><div class="row"><div class="col-6 mb-3"><label class="form-label small text-muted">Inicio Garantía</label><input type="date" id="warranty-start-input" class="form-control"></div><div class="col-6 mb-3"><label class="form-label small text-muted">Fin Garantía</label><input type="date" id="warranty-end-input" class="form-control"></div></div></div><div class="modal-footer border-0 pt-0"><button type="button" class="btn btn-primary" style="background-color: var(--sidebar-active); border:none; width: 100%;" id="save-warranty-btn">Guardar Garantía</button></div></div></div></div>
     <div class="modal fade" id="taskDetailModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-semibold">Detalles de Tarea</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="task-id-input"><input type="hidden" id="task-status-input"><div class="mb-3"><input type="text" id="task-title-input" class="form-control" placeholder="Título"></div><div class="mb-3"><textarea id="task-description-input" class="form-control" rows="2" placeholder="Detalles..."></textarea></div><div class="row"><div class="col-md-6 mb-3"><select id="task-priority-input" class="form-select"><option value="Baja">Baja</option><option value="Media" selected>Media</option><option value="Alta">Alta</option></select></div><div class="col-md-6 mb-3"><input type="date" id="task-due-date-input" class="form-control"></div></div></div><div class="modal-footer border-0 pt-0 d-flex justify-content-between"><button type="button" class="btn btn-outline-danger" id="delete-task-btn">Eliminar</button><button type="button" class="btn btn-primary" style="background-color: var(--sidebar-active); border:none;" id="save-task-details-btn">Guardar</button></div></div></div></div>
     <div class="modal fade" id="addFinanceModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-semibold">Nuevo Movimiento</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="mb-3"><label class="form-label small text-muted">Tipo</label><select id="fin-type-input" class="form-select"><option value="income">Ingreso</option><option value="expense">Gasto</option></select></div><div class="mb-3"><label class="form-label small text-muted">Concepto</label><input type="text" id="fin-concept-input" class="form-control" placeholder="Ej. Pago inicial"></div><div class="row"><div class="col-6 mb-3"><label class="form-label small text-muted">Monto ($)</label><input type="number" id="fin-amount-input" class="form-control" placeholder="0.00"></div><div class="col-6 mb-3"><label class="form-label small text-muted">Fecha</label><input type="date" id="fin-date-input" class="form-control"></div></div></div><div class="modal-footer border-0 pt-0"><button type="button" class="btn btn-primary" style="background-color: var(--sidebar-active); border:none; width: 100%;" id="add-finance-btn">Guardar Movimiento</button></div></div></div></div>
+
+    <div class="modal fade" id="integrationModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-semibold">Integración</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="integration-id-input">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small text-muted">Nombre</label>
+                            <input type="text" id="integration-name-input" class="form-control" placeholder="Ej. n8n CRM">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small text-muted">Tipo</label>
+                            <select id="integration-type-input" class="form-select">
+                                <option value="webhook">Webhook</option>
+                                <option value="zapier">Zapier</option>
+                                <option value="make">Make</option>
+                                <option value="n8n">n8n</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Endpoint</label>
+                        <input type="url" id="integration-endpoint-input" class="form-control" placeholder="https://...">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted">Secreto de firma</label>
+                        <input type="text" id="integration-secret-input" class="form-control" placeholder="Opcional para validar webhooks">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small text-muted d-block mb-2">Eventos</label>
+                        <div id="integration-events-inputs" class="d-flex flex-wrap gap-2"></div>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input class="form-check-input" type="checkbox" id="integration-enabled-input" checked>
+                        <label class="form-check-label" for="integration-enabled-input">Habilitada</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-primary" id="test-integration-btn" style="display:none;">Probar</button>
+                    <div class="ms-auto d-flex gap-2">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" id="save-integration-btn" style="background-color: var(--sidebar-active); border:none;">Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="modal fade" id="addNoteModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-semibold">Nota</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="note-id-input"><div class="mb-3"><label class="form-label small text-muted">Carpeta</label><select id="note-folder-input" class="form-select"></select></div><div class="mb-3"><label class="form-label small text-muted">Título</label><input type="text" id="note-title-input" class="form-control" placeholder="Título de la nota"></div><div class="mb-3"><label class="form-label small text-muted">Contenido</label><textarea id="note-content-input" class="form-control" rows="5" placeholder="Escribe tu nota aquí..."></textarea></div><div class="mb-3"><label class="form-label small text-muted">Color</label><input type="color" id="note-color-input" class="form-control form-control-color w-100" value="#6e48c1"></div></div><div class="modal-footer border-0 pt-0"><button type="button" class="btn btn-primary" style="background-color: var(--sidebar-active); border:none; width: 100%;" id="save-note-btn">Guardar Nota</button></div></div></div></div>
 

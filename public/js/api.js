@@ -161,6 +161,47 @@ const api = {
         return res.json();
     },
 
+    // ---- INTEGRATIONS ----
+    async getIntegrations() {
+        const res = await apiFetch(`${API_URL}/integrations`);
+        if (!res.ok) throw new Error('Error cargando integraciones');
+        return res.json();
+    },
+    async createIntegration(data) {
+        const id = genId();
+        const res = await apiFetch(`${API_URL}/integrations`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...data, id: String(id) })
+        });
+        if (!res.ok) throw new Error('Error creando integración');
+        return { ...data, id: String(id) };
+    },
+    async updateIntegration(id, data) {
+        const res = await apiFetch(`${API_URL}/integrations/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Error actualizando integración');
+        return res.json();
+    },
+    async deleteIntegration(id) {
+        const res = await apiFetch(`${API_URL}/integrations/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Error eliminando integración');
+        return res.json();
+    },
+    async testIntegration(id) {
+        const res = await apiFetch(`${API_URL}/integrations/${id}/test`, { method: 'POST' });
+        if (!res.ok) throw new Error('Error probando integración');
+        return res.json();
+    },
+    async getIntegrationEvents() {
+        const res = await apiFetch(`${API_URL}/integration-events`);
+        if (!res.ok) throw new Error('Error cargando eventos de integración');
+        return res.json();
+    },
+
     // ---- SETTINGS ----
     async saveSetting(key, value) {
         const res = await apiFetch(`${API_URL}/settings`, {

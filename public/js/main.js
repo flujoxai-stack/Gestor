@@ -17,6 +17,8 @@ let state = {
     notes: [],
     noteFolders: ['General', 'APIs', 'Contraseñas'],
     noteFolderColors: {},
+    integrations: [],
+    integrationEvents: [],
     globalTimeSpent: 0
 };
 
@@ -36,6 +38,8 @@ async function loadState() {
         state.notes          = data.notes          || [];
         state.noteFolders    = data.noteFolders    || ['General', 'APIs', 'Contraseñas'];
         state.noteFolderColors = data.noteFolderColors || {};
+        state.integrations   = data.integrations   || [];
+        state.integrationEvents = data.integrationEvents || [];
         state.globalTimeSpent = data.globalTimeSpent || 0;
         state.currentProjectId = data.currentProjectId || 
             (state.projects.length > 0 ? state.projects[0].id : null);
@@ -48,6 +52,8 @@ async function loadState() {
         if (!state.notes)       state.notes = [];
         if (!state.noteFolders) state.noteFolders = ['General','APIs','Contraseñas'];
         if (!state.noteFolderColors) state.noteFolderColors = {};
+        if (!state.integrations) state.integrations = [];
+        if (!state.integrationEvents) state.integrationEvents = [];
     }
 }
 
@@ -164,7 +170,8 @@ window.startGestorApp = async function startGestorApp() {
         pipeline:  document.getElementById('pipeline-view'),
         reports:   document.getElementById('reports-view'),
         database:  document.getElementById('database-view'),
-        notes:     document.getElementById('notes-view')
+        notes:     document.getElementById('notes-view'),
+        integrations: document.getElementById('integrations-view')
     };
     const navLinks = {
         dashboard: document.getElementById('nav-dashboard'),
@@ -177,7 +184,8 @@ window.startGestorApp = async function startGestorApp() {
         pipeline:  document.getElementById('nav-pipeline'),
         reports:   document.getElementById('nav-reports'),
         database:  document.getElementById('nav-database'),
-        notes:     document.getElementById('nav-notes')
+        notes:     document.getElementById('nav-notes'),
+        integrations: document.getElementById('nav-integrations')
     };
     const sidebar = document.getElementById('sidebar-menu');
     const sidebarBackdrop = document.getElementById('sidebar-backdrop');
@@ -1068,6 +1076,224 @@ function renderNoteFolderTabs() {
         setNoteColorDefault(event.target.value);
     });
 
+    // ---- INTEGRACIONES ----
+    const integrationModalEl = document.getElementById('integrationModal');
+    const integrationModal = integrationModalEl ? new bootstrap.Modal(integrationModalEl) : null;
+    const integrationEventOptions = [
+        { value: 'all', label: 'Todos' },
+        { value: 'project.created', label: 'Proyecto creado' },
+        { value: 'project.updated', label: 'Proyecto actualizado' },
+        { value: 'project.deleted', label: 'Proyecto eliminado' },
+        { value: 'task.created', label: 'Tarea creada' },
+        { value: 'task.updated', label: 'Tarea actualizada' },
+        { value: 'task.deleted', label: 'Tarea eliminada' },
+        { value: 'finance.created', label: 'Movimiento creado' },
+        { value: 'finance.deleted', label: 'Movimiento eliminado' },
+        { value: 'note.created', label: 'Nota creada' },
+        { value: 'note.updated', label: 'Nota actualizada' },
+        { value: 'note.deleted', label: 'Nota eliminada' },
+        { value: 'folder.created', label: 'Carpeta creada' }
+    ];
+    let currentIntegrationId = '';
+
+    function selectedIntegrationEvents() {
+        const container = document.getElementById('integration-events-inputs');
+        if (!container) return ['all'];
+        const checked = Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value);
+        return checked.length ? checked : ['all'];
+    }
+
+    function renderIntegrationEventInputs(selected = ['all']) {
+        const container = document.getElementById('integration-events-inputs');
+        if (!container) return;
+        container.innerHTML = '';
+        integrationEventOptions.forEach((item) => {
+            const wrap = document.createElement('label');
+            wrap.className = 'badge rounded-pill text-dark border d-inline-flex align-items-center gap-2 p-2';
+            wrap.style.cursor = 'pointer';
+            wrap.style.background = 'var(--card-bg)';
+            wrap.style.borderColor = 'var(--border-color)';
+            wrap.innerHTML = `
+                <input type="checkbox" value="${item.value}" ${selected.includes(item.value) ? 'checked' : ''}>
+                <span>${item.label}</span>
+            `;
+            container.appendChild(wrap);
+        });
+    }
+
+    async function refreshIntegrationsState() {
+        try {
+            state.integrations = await api.getIntegrations();
+        } catch {
+            state.integrations = [];
+        }
+        try {
+            state.integrationEvents = await api.getIntegrationEvents();
+        } catch {
+            state.integrationEvents = [];
+        }
+    }
+
+    function renderIntegrations() {
+        const list = document.getElementById('integration-list');
+        const eventsBody = document.getElementById('integration-events-body');
+        const countEl = document.getElementById('integration-count');
+        const enabledEl = document.getElementById('integration-enabled-count');
+        const eventCountEl = document.getElementById('integration-event-count');
+        if (countEl) countEl.textContent = String(state.integrations.length);
+        if (enabledEl) enabledEl.textContent = String(state.integrations.filter((item) => item.enabled).length);
+        if (eventCountEl) eventCountEl.textContent = String(state.integrationEvents.length);
+
+        if (list) {
+            list.innerHTML = '';
+            if (!state.integrations.length) {
+                list.innerHTML = '<div class="col-12"><p class="text-muted small mb-0">Todavía no hay integraciones configuradas.</p></div>';
+            } else {
+                state.integrations.forEach((integration) => {
+                    const col = document.createElement('div');
+                    col.className = 'col';
+                    const eventsLabel = (integration.events || []).map((event) => event === 'all' ? 'Todos' : event).join(', ');
+                    col.innerHTML = `
+                        <div class="dash-card h-100 p-3">
+                            <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                                <div>
+                                    <div class="d-flex align-items-center gap-2 mb-1">
+                                        <strong>${integration.name || 'Integración sin nombre'}</strong>
+                                        <span class="badge rounded-pill ${integration.enabled ? 'bg-success' : 'bg-secondary'}">${integration.enabled ? 'Activa' : 'Pausada'}</span>
+                                    </div>
+                                    <small class="text-muted text-uppercase">${integration.type || 'webhook'}</small>
+                                </div>
+                                <button class="btn btn-sm btn-outline-danger" data-action="delete">Eliminar</button>
+                            </div>
+                            <div class="small text-muted mb-2" style="word-break: break-word;">${integration.endpoint || 'Sin endpoint configurado'}</div>
+                            <div class="small mb-3"><strong>Eventos:</strong> ${eventsLabel || 'Todos'}</div>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button class="btn btn-sm btn-outline-primary" data-action="edit">Editar</button>
+                                <button class="btn btn-sm btn-primary" style="background-color: var(--sidebar-active); border:none;" data-action="test">Probar</button>
+                            </div>
+                        </div>`;
+                    const [editBtn, testBtn, deleteBtn] = [
+                        col.querySelector('[data-action="edit"]'),
+                        col.querySelector('[data-action="test"]'),
+                        col.querySelector('[data-action="delete"]')
+                    ];
+                    editBtn.addEventListener('click', () => openIntegrationModal(integration));
+                    testBtn.addEventListener('click', async () => {
+                        try {
+                            await api.testIntegration(integration.id);
+                            await refreshIntegrationsState();
+                            renderIntegrations();
+                            showToast(`Prueba enviada a ${integration.name}`);
+                        } catch (err) {
+                            alert('Error al probar integración: ' + err.message);
+                        }
+                    });
+                    deleteBtn.addEventListener('click', async () => {
+                        if (!confirm(`¿Eliminar la integración "${integration.name}"?`)) return;
+                        try {
+                            await api.deleteIntegration(integration.id);
+                            await refreshIntegrationsState();
+                            renderIntegrations();
+                        } catch (err) {
+                            alert('Error al eliminar integración: ' + err.message);
+                        }
+                    });
+                    list.appendChild(col);
+                });
+            }
+        }
+
+        if (eventsBody) {
+            eventsBody.innerHTML = '';
+            if (!state.integrationEvents.length) {
+                eventsBody.innerHTML = '<tr><td colspan="5" class="text-muted">Todavía no hay eventos registrados.</td></tr>';
+            } else {
+                state.integrationEvents.forEach((entry) => {
+                    const integration = state.integrations.find((item) => String(item.id) === String(entry.integration_id));
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${entry.created_at ? new Date(entry.created_at).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '--'}</td>
+                        <td>${integration ? integration.name : entry.integration_id}</td>
+                        <td>${entry.event_type || '--'}</td>
+                        <td><span class="badge ${String(entry.status).startsWith('success') ? 'bg-success' : String(entry.status).startsWith('http_') ? 'bg-warning text-dark' : 'bg-danger'}">${entry.status || 'unknown'}</span></td>
+                        <td style="max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${entry.response || '--'}</td>`;
+                    eventsBody.appendChild(tr);
+                });
+            }
+        }
+    }
+
+    function openIntegrationModal(integration = null) {
+        if (!integrationModal) return;
+        currentIntegrationId = integration ? String(integration.id) : '';
+        document.getElementById('integration-id-input').value = currentIntegrationId;
+        document.getElementById('integration-name-input').value = integration?.name || '';
+        document.getElementById('integration-type-input').value = integration?.type || 'webhook';
+        document.getElementById('integration-endpoint-input').value = integration?.endpoint || '';
+        document.getElementById('integration-secret-input').value = integration?.secret || '';
+        document.getElementById('integration-enabled-input').checked = integration ? !!integration.enabled : true;
+        renderIntegrationEventInputs(integration?.events || ['all']);
+        document.getElementById('test-integration-btn').style.display = integration ? 'inline-flex' : 'none';
+        document.getElementById('save-integration-btn').textContent = integration ? 'Guardar cambios' : 'Guardar';
+        integrationModal.show();
+    }
+
+    window.openIntegrationModal = openIntegrationModal;
+
+    document.getElementById('integration-events-inputs').addEventListener('change', (event) => {
+        if (event.target && event.target.type === 'checkbox') {
+            const container = document.getElementById('integration-events-inputs');
+            const allBox = container.querySelector('input[value="all"]');
+            const others = Array.from(container.querySelectorAll('input[type="checkbox"]')).filter((input) => input.value !== 'all');
+            if (event.target.value === 'all' && event.target.checked) {
+                others.forEach((input) => { input.checked = false; });
+            } else if (event.target.value !== 'all' && event.target.checked && allBox) {
+                allBox.checked = false;
+            }
+        }
+    });
+
+    document.getElementById('save-integration-btn').addEventListener('click', async () => {
+        const payload = {
+            name: document.getElementById('integration-name-input').value.trim(),
+            type: document.getElementById('integration-type-input').value,
+            endpoint: document.getElementById('integration-endpoint-input').value.trim(),
+            secret: document.getElementById('integration-secret-input').value.trim(),
+            enabled: document.getElementById('integration-enabled-input').checked,
+            events: selectedIntegrationEvents(),
+            method: 'POST'
+        };
+        if (!payload.name || !payload.endpoint) {
+            alert('Nombre y endpoint son requeridos.');
+            return;
+        }
+        try {
+            if (currentIntegrationId) {
+                await api.updateIntegration(currentIntegrationId, payload);
+            } else {
+                await api.createIntegration(payload);
+            }
+            await refreshIntegrationsState();
+            renderIntegrations();
+            integrationModal.hide();
+            showToast(currentIntegrationId ? 'Integración actualizada' : 'Integración creada');
+        } catch (err) {
+            alert('Error guardando integración: ' + err.message);
+        }
+    });
+
+    document.getElementById('test-integration-btn').addEventListener('click', async () => {
+        if (!currentIntegrationId) return;
+        try {
+            await api.testIntegration(currentIntegrationId);
+            await refreshIntegrationsState();
+            renderIntegrations();
+            showToast('Prueba enviada');
+        } catch (err) {
+            alert('Error al probar integración: ' + err.message);
+        }
+    });
+
     // ---- COPILOT ----
     window.openCopilotDemo=function(){
         const t=document.getElementById('copilot-tooltip');
@@ -1102,10 +1328,12 @@ function renderNoteFolderTabs() {
     navLinks.reports.addEventListener('click',()=>{ showView('reports','Reportes','Resumen ejecutivo'); renderReports(); });
     navLinks.database.addEventListener('click',()=>{ showView('database','Base de Datos','Vista de todas las tareas'); renderDatabase(); });
     navLinks.notes.addEventListener('click',()=>{ showView('notes','Notas','Tus notas y apuntes'); renderNoteFolderTabs(); renderNotesList(); });
+    navLinks.integrations.addEventListener('click',()=>{ showView('integrations','Integraciones','Conecta el CRM con otras herramientas'); renderIntegrations(); });
 
     // ---- INICIO ----
     showView('dashboard','Performance Overview','Resumen de datos');
     renderDashboard();
+    await refreshIntegrationsState();
 }
 
 if (window.__GESTOR_AUTH_READY && window.__GESTOR_ACCESS_TOKEN) {
