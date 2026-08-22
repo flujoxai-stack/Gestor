@@ -1,0 +1,148 @@
+{
+  "name": "CRM - Gmail Negocios to Gestor",
+  "nodes": [
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "event": "messageReceived",
+        "simple": true,
+        "maxResults": 10,
+        "filters": {
+          "labelIds": [
+            "negocios"
+          ],
+          "q": "label:negocios",
+          "readStatus": "unread",
+          "sender": "",
+          "includeSpamTrash": false,
+          "includeDrafts": false
+        }
+      },
+      "id": "b6d9f7d1-5b10-4b28-91dd-24ef4a5d01b1",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        420,
+        300
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const fromRaw = $json.from || '';\nconst emailMatch = fromRaw.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i);\nconst nameMatch = fromRaw.match(/^(.*)<(.+)>$/);\nconst fromName = nameMatch ? nameMatch[1].trim().replace(/^\"|\"$/g, '') : (emailMatch ? fromRaw.replace(emailMatch[0], '').replace(/[<>\\(\\)\"]+/g, '').trim() : fromRaw);\nconst fromEmail = nameMatch ? nameMatch[2].trim() : (emailMatch ? emailMatch[0] : '');\nconst rawDate = $json.date || $json.internalDate || $json.receivedAt || Date.now();\nconst receivedAt = new Date(rawDate).toISOString();\n\nreturn [\n  {\n    json: {\n      id: $json.id || $json.messageId || $json.message_id || '',\n      source: 'gmail',\n      label: 'negocios',\n      from_name: fromName,\n      from_email: fromEmail,\n      subject: $json.subject || '',\n      snippet: $json.snippet || '',\n      body: $json.snippet || '',\n      message_id: $json.id || $json.messageId || $json.message_id || '',\n      thread_id: $json.threadId || $json.thread_id || '',\n      received_at: receivedAt,\n      url: $json.webViewLink || '',\n      raw: $json\n    }\n  }\n];"
+      },
+      "id": "f7d9f9fe-0c9c-4f14-9f15-640fbabecbcb",
+      "name": "Normalize Business Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:3000/webhooks/n8n/business-email",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ id: $json.id, source: $json.source, label: $json.label, from_name: $json.from_name, from_email: $json.from_email, subject: $json.subject, snippet: $json.snippet, body: $json.body, message_id: $json.message_id, thread_id: $json.thread_id, received_at: $json.received_at, url: $json.url }) }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Gestor-Webhook-Secret",
+              "value": "={{ $env.N8N_WEBHOOK_SECRET || 'change-me' }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json",
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "e2d87d7e-6a2e-4d33-b96f-6a6ceab42b0e",
+      "name": "Send to CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        920,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "markAsRead",
+        "messageId": "={{ $('Normalize Business Email').item.json.message_id }}"
+      },
+      "id": "8c1773e3-4fd8-4e86-b69f-f2ec9d1f4cf1",
+      "name": "Mark as Read",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1180,
+        300
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail OAuth2"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalize Business Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Business Email": {
+      "main": [
+        [
+          {
+            "node": "Send to CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to CRM": {
+      "main": [
+        [
+          {
+            "node": "Mark as Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1"
+}
