@@ -202,6 +202,22 @@ const api = {
         return res.json();
     },
 
+    // ---- BUSINESS MAIL ----
+    async getBusinessNotifications() {
+        const res = await apiFetch(`${API_URL}/business-notifications`);
+        if (!res.ok) throw new Error('Error cargando notificaciones de negocio');
+        return res.json();
+    },
+    async updateBusinessNotification(id, data) {
+        const res = await apiFetch(`${API_URL}/business-notifications/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Error actualizando notificación');
+        return res.json();
+    },
+
     // ---- SETTINGS ----
     async saveSetting(key, value) {
         const res = await apiFetch(`${API_URL}/settings`, {

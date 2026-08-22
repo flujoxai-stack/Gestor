@@ -19,6 +19,7 @@ let state = {
     noteFolderColors: {},
     integrations: [],
     integrationEvents: [],
+    businessNotifications: [],
     globalTimeSpent: 0
 };
 
@@ -40,6 +41,7 @@ async function loadState() {
         state.noteFolderColors = data.noteFolderColors || {};
         state.integrations   = data.integrations   || [];
         state.integrationEvents = data.integrationEvents || [];
+        state.businessNotifications = data.businessNotifications || [];
         state.globalTimeSpent = data.globalTimeSpent || 0;
         state.currentProjectId = data.currentProjectId || 
             (state.projects.length > 0 ? state.projects[0].id : null);
@@ -54,6 +56,7 @@ async function loadState() {
         if (!state.noteFolderColors) state.noteFolderColors = {};
         if (!state.integrations) state.integrations = [];
         if (!state.integrationEvents) state.integrationEvents = [];
+        if (!state.businessNotifications) state.businessNotifications = [];
     }
 }
 
@@ -171,6 +174,7 @@ window.startGestorApp = async function startGestorApp() {
         reports:   document.getElementById('reports-view'),
         database:  document.getElementById('database-view'),
         notes:     document.getElementById('notes-view'),
+        businessMail: document.getElementById('business-mail-view'),
         integrations: document.getElementById('integrations-view')
     };
     const navLinks = {
@@ -185,6 +189,7 @@ window.startGestorApp = async function startGestorApp() {
         reports:   document.getElementById('nav-reports'),
         database:  document.getElementById('nav-database'),
         notes:     document.getElementById('nav-notes'),
+        businessMail: document.getElementById('nav-business-mail'),
         integrations: document.getElementById('nav-integrations')
     };
     const sidebar = document.getElementById('sidebar-menu');
@@ -1092,7 +1097,8 @@ function renderNoteFolderTabs() {
         { value: 'note.created', label: 'Nota creada' },
         { value: 'note.updated', label: 'Nota actualizada' },
         { value: 'note.deleted', label: 'Nota eliminada' },
-        { value: 'folder.created', label: 'Carpeta creada' }
+        { value: 'folder.created', label: 'Carpeta creada' },
+        { value: 'business.email.received', label: 'Correo de negocio recibido' }
     ];
     let currentIntegrationId = '';
 
@@ -1294,6 +1300,117 @@ function renderNoteFolderTabs() {
         }
     });
 
+    // ---- CORREO NEGOCIO ----
+    const businessMailModalEl = document.getElementById('businessMailModal');
+    const businessMailModal = businessMailModalEl ? new bootstrap.Modal(businessMailModalEl) : null;
+    let currentBusinessMailId = '';
+
+    async function refreshBusinessMailState() {
+        try {
+            state.businessNotifications = await api.getBusinessNotifications();
+        } catch {
+            state.businessNotifications = [];
+        }
+    }
+
+    function renderBusinessMail() {
+        const body = document.getElementById('business-mail-body');
+        const totalEl = document.getElementById('business-mail-count');
+        const unreadEl = document.getElementById('business-mail-unread');
+        const labeledEl = document.getElementById('business-mail-labeled');
+        if (totalEl) totalEl.textContent = String(state.businessNotifications.length);
+        if (unreadEl) unreadEl.textContent = String(state.businessNotifications.filter((item) => !item.is_read).length);
+        if (labeledEl) labeledEl.textContent = String(state.businessNotifications.filter((item) => (item.label || '').toLowerCase() === 'negocios').length);
+
+        if (!body) return;
+        body.innerHTML = '';
+        if (!state.businessNotifications.length) {
+            body.innerHTML = '<tr><td colspan="6" class="text-muted">Todavía no han llegado correos de negocio.</td></tr>';
+            return;
+        }
+
+        state.businessNotifications.forEach((mail) => {
+            const tr = document.createElement('tr');
+            tr.style.cursor = 'pointer';
+            tr.innerHTML = `
+                <td>${mail.received_at ? new Date(mail.received_at).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '--'}</td>
+                <td>
+                    <div class="d-flex flex-column">
+                        <strong>${mail.from_name || mail.from_email || '--'}</strong>
+                        <small class="text-muted">${mail.from_email || ''}</small>
+                    </div>
+                </td>
+                <td>
+                    <div class="d-flex flex-column">
+                        <strong>${mail.subject || '--'}</strong>
+                        <small class="text-muted text-truncate" style="max-width: 340px;">${mail.snippet || ''}</small>
+                    </div>
+                </td>
+                <td><span class="badge rounded-pill ${mail.label === 'negocios' ? 'bg-success' : 'bg-secondary'}">${mail.label || '--'}</span></td>
+                <td><span class="badge rounded-pill ${mail.is_read ? 'bg-secondary' : 'bg-warning text-dark'}">${mail.is_read ? 'Leído' : 'Nuevo'}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-2" data-action="view">Ver</button>
+                    <button class="btn btn-sm btn-outline-success" data-action="toggle">${mail.is_read ? 'No leído' : 'Leído'}</button>
+                </td>`;
+            tr.addEventListener('click', async (event) => {
+                const target = event.target;
+                if (target && target.matches('[data-action="toggle"]')) return;
+                if (target && target.matches('[data-action="view"]')) return;
+                openBusinessMailModal(mail);
+            });
+            tr.querySelector('[data-action="view"]').addEventListener('click', () => openBusinessMailModal(mail));
+            tr.querySelector('[data-action="toggle"]').addEventListener('click', async () => {
+                try {
+                    await api.updateBusinessNotification(mail.id, { is_read: !mail.is_read });
+                    await refreshBusinessMailState();
+                    renderBusinessMail();
+                } catch (err) {
+                    alert('Error al actualizar correo: ' + err.message);
+                }
+            });
+            body.appendChild(tr);
+        });
+    }
+
+    function openBusinessMailModal(mail) {
+        if (!businessMailModal || !mail) return;
+        currentBusinessMailId = String(mail.id || '');
+        document.getElementById('business-mail-id-input').value = currentBusinessMailId;
+        document.getElementById('business-mail-subject').value = mail.subject || '';
+        document.getElementById('business-mail-label').value = mail.label || '';
+        document.getElementById('business-mail-from').value = mail.from_name && mail.from_email
+            ? `${mail.from_name} <${mail.from_email}>`
+            : (mail.from_name || mail.from_email || '');
+        document.getElementById('business-mail-date').value = mail.received_at ? new Date(mail.received_at).toLocaleString('es-ES') : '';
+        document.getElementById('business-mail-snippet').value = mail.snippet || '';
+        document.getElementById('business-mail-body-text').value = mail.body || '';
+        document.getElementById('business-mail-url').value = mail.url || '';
+        document.getElementById('business-mail-toggle-read-btn').textContent = mail.is_read ? 'Marcar no leído' : 'Marcar leído';
+        businessMailModal.show();
+    }
+
+    window.refreshBusinessMail = async function refreshBusinessMail() {
+        await refreshBusinessMailState();
+        renderBusinessMail();
+    };
+
+    window.openBusinessMailModal = openBusinessMailModal;
+
+    document.getElementById('business-mail-toggle-read-btn').addEventListener('click', async () => {
+        if (!currentBusinessMailId) return;
+        const mail = state.businessNotifications.find((item) => String(item.id) === String(currentBusinessMailId));
+        const nextValue = !(mail && mail.is_read);
+        try {
+            await api.updateBusinessNotification(currentBusinessMailId, { is_read: nextValue });
+            await refreshBusinessMailState();
+            renderBusinessMail();
+            openBusinessMailModal(state.businessNotifications.find((item) => String(item.id) === String(currentBusinessMailId)));
+            showToast(nextValue ? 'Marcado como leído' : 'Marcado como no leído');
+        } catch (err) {
+            alert('Error actualizando correo: ' + err.message);
+        }
+    });
+
     // ---- COPILOT ----
     window.openCopilotDemo=function(){
         const t=document.getElementById('copilot-tooltip');
@@ -1328,11 +1445,13 @@ function renderNoteFolderTabs() {
     navLinks.reports.addEventListener('click',()=>{ showView('reports','Reportes','Resumen ejecutivo'); renderReports(); });
     navLinks.database.addEventListener('click',()=>{ showView('database','Base de Datos','Vista de todas las tareas'); renderDatabase(); });
     navLinks.notes.addEventListener('click',()=>{ showView('notes','Notas','Tus notas y apuntes'); renderNoteFolderTabs(); renderNotesList(); });
+    navLinks.businessMail.addEventListener('click',()=>{ showView('businessMail','Correo Negocio','Solo mensajes filtrados por n8n y Gmail'); renderBusinessMail(); });
     navLinks.integrations.addEventListener('click',()=>{ showView('integrations','Integraciones','Conecta el CRM con otras herramientas'); renderIntegrations(); });
 
     // ---- INICIO ----
     showView('dashboard','Performance Overview','Resumen de datos');
     renderDashboard();
+    await refreshBusinessMailState();
     await refreshIntegrationsState();
 }
 

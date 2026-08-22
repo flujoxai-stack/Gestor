@@ -74,6 +74,26 @@ create table if not exists public.integration_events (
     created_at text not null
 );
 
+create table if not exists public.business_notifications (
+    id text primary key,
+    source text not null default 'gmail',
+    label text not null default 'negocios',
+    from_name text,
+    from_email text,
+    subject text not null default '',
+    snippet text,
+    body text,
+    message_id text,
+    thread_id text,
+    url text,
+    metadata text not null default '{}',
+    received_at text not null,
+    is_read boolean not null default false,
+    notes text,
+    created_at text not null,
+    updated_at text not null
+);
+
 create index if not exists tasks_project_id_idx on public.tasks (project_id);
 create index if not exists tasks_status_idx on public.tasks (status);
 create index if not exists finances_date_idx on public.finances (date desc);
@@ -83,6 +103,9 @@ create index if not exists projects_pipeline_order_idx on public.projects (pipel
 create index if not exists integrations_updated_at_idx on public.integrations (updated_at desc);
 create index if not exists integration_events_created_at_idx on public.integration_events (created_at desc);
 create index if not exists integration_events_integration_id_idx on public.integration_events (integration_id);
+create index if not exists business_notifications_received_at_idx on public.business_notifications (received_at desc);
+create index if not exists business_notifications_label_idx on public.business_notifications (label);
+create index if not exists business_notifications_is_read_idx on public.business_notifications (is_read);
 
 insert into public.note_folders (name)
 values ('General'), ('APIs'), ('Contraseñas')
@@ -98,5 +121,6 @@ grant select, insert, update, delete on
     public.note_folders,
     public.settings,
     public.integrations,
-    public.integration_events
+    public.integration_events,
+    public.business_notifications
 to anon, authenticated;

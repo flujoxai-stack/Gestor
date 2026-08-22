@@ -24,10 +24,11 @@ const AUTH_ALLOWED_EMAILS = (process.env.AUTH_ALLOWED_EMAILS || '')
     .map((email) => email.trim().toLowerCase())
     .filter(Boolean);
 const AUTH_FALLBACK_EMAIL = 'flujoxai@gmail.com';
+const N8N_WEBHOOK_SECRET = (process.env.N8N_WEBHOOK_SECRET || '').trim();
 if (AUTH_ALLOWED_EMAILS.length === 0) {
     AUTH_ALLOWED_EMAILS.push(AUTH_FALLBACK_EMAIL);
 }
-const INTEGRATION_DEFAULT_EVENTS = ['project.created', 'project.updated', 'project.deleted', 'task.created', 'task.updated', 'task.deleted', 'finance.created', 'finance.deleted', 'note.created', 'note.updated', 'note.deleted', 'folder.created'];
+const INTEGRATION_DEFAULT_EVENTS = ['project.created', 'project.updated', 'project.deleted', 'task.created', 'task.updated', 'task.deleted', 'finance.created', 'finance.deleted', 'note.created', 'note.updated', 'note.deleted', 'folder.created', 'business.email.received'];
 
 app.use(cors());
 app.use(express.json());
@@ -176,6 +177,20 @@ async function getIntegrations() {
     return rows.map(normalizeIntegration);
 }
 
+function normalizeBusinessNotification(row) {
+    const metadata = parseJson(row.metadata, {});
+    return {
+        ...row,
+        is_read: row.is_read === true || row.is_read === 1 || row.is_read === '1' || row.is_read === 'true',
+        metadata,
+    };
+}
+
+async function getBusinessNotifications(limit = 50) {
+    const rows = await selectRows('business_notifications', { order: 'received_at.desc', limit });
+    return rows.map(normalizeBusinessNotification);
+}
+
 function integrationMatchesEvent(integration, eventType) {
     const events = integration.events || [];
     return events.includes('all') || events.includes(eventType) || events.some((event) => eventType.startsWith(`${event}.`));
@@ -260,6 +275,7 @@ app.get('/api/state', async (req, res) => {
         const folders = await selectRows('note_folders', { columns: 'name' });
         const timeSetting = await selectOneRow('settings', { filters: { key: 'globalTimeSpent' } });
         const folderColorsSetting = await selectOneRow('settings', { filters: { key: 'noteFolderColors' } });
+        const businessNotifications = await getBusinessNotifications(50);
         let integrations = [];
         let integrationEvents = [];
         try {
@@ -287,6 +303,7 @@ app.get('/api/state', async (req, res) => {
             noteFolderColors,
             integrations,
             integrationEvents,
+            businessNotifications,
             globalTimeSpent: timeSetting ? parseInt(timeSetting.value, 10) || 0 : 0,
         });
     } catch (err) {
@@ -790,6 +807,77 @@ app.post('/api/integrations/:id/test', async (req, res) => {
         }
         return res.json({ success: true, ...result });
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/business-notifications', async (req, res) => {
+    try {
+        const rows = await getBusinessNotifications(100);
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/business-notifications/:id', async (req, res) => {
+    const { is_read, label, notes } = req.body || {};
+    try {
+        await updateRows(
+            'business_notifications',
+            { id: req.params.id },
+            {
+                is_read: is_read === true || is_read === 'true' || is_read === 1 || is_read === '1',
+                label,
+                notes,
+                updated_at: integrationNow(),
+            }
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/webhooks/n8n/business-email', async (req, res) => {
+    try {
+        if (N8N_WEBHOOK_SECRET) {
+            const secretHeader = String(req.headers['x-gestor-webhook-secret'] || '').trim();
+            if (!secretHeader || secretHeader !== N8N_WEBHOOK_SECRET) {
+                return res.status(401).json({ error: 'Invalid webhook secret' });
+            }
+        }
+
+        const payload = req.body || {};
+        const record = {
+            id: String(payload.id || payload.message_id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+            source: String(payload.source || 'gmail'),
+            label: String(payload.label || 'negocios'),
+            from_name: String(payload.from_name || ''),
+            from_email: String(payload.from_email || payload.from || ''),
+            subject: String(payload.subject || ''),
+            snippet: String(payload.snippet || ''),
+            body: String(payload.body || ''),
+            message_id: String(payload.message_id || payload.id || ''),
+            thread_id: String(payload.thread_id || ''),
+            url: String(payload.url || ''),
+            metadata: JSON.stringify(payload.metadata || payload),
+            received_at: String(payload.received_at || payload.date || integrationNow()),
+            is_read: false,
+            created_at: integrationNow(),
+            updated_at: integrationNow(),
+        };
+
+        await upsertRow('business_notifications', record, 'id');
+        void emitIntegrationEvent('business.email.received', { notification: record, raw: payload, source: 'n8n' });
+
+        res.json({
+            success: true,
+            id: record.id,
+            label: record.label,
+        });
+    } catch (err) {
+        console.error('N8N business email webhook error:', err);
         res.status(500).json({ error: err.message });
     }
 });
