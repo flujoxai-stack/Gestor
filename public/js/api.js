@@ -4,12 +4,33 @@
 
 const API_URL = '/api';
 const nativeFetch = window.fetch.bind(window);
+const SESSION_KEY = 'gestor_auth_session';
+
+function getStoredAccessToken() {
+    try {
+        if (window.__GESTOR_ACCESS_TOKEN) return window.__GESTOR_ACCESS_TOKEN;
+        const rawSession = localStorage.getItem(SESSION_KEY);
+        if (!rawSession) return '';
+        const session = JSON.parse(rawSession);
+        const token = String(session?.access_token || '').trim();
+        if (token) {
+            window.__GESTOR_ACCESS_TOKEN = token;
+            return token;
+        }
+    } catch {
+        // Ignorar: si el token no se puede leer, el backend devolverá 401.
+    }
+    return '';
+}
 
 async function apiFetch(input, options = {}) {
     const requestUrl = typeof input === 'string' ? input : input?.url || '';
     const headers = new Headers(options.headers || (input && input.headers ? input.headers : undefined));
-    if (requestUrl.startsWith(API_URL) && window.__GESTOR_ACCESS_TOKEN) {
-        headers.set('Authorization', `Bearer ${window.__GESTOR_ACCESS_TOKEN}`);
+    if (requestUrl.startsWith(API_URL)) {
+        const accessToken = getStoredAccessToken();
+        if (accessToken) {
+            headers.set('Authorization', `Bearer ${accessToken}`);
+        }
     }
     return nativeFetch(input, { ...options, headers });
 }

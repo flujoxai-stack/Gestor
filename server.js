@@ -268,22 +268,34 @@ async function emitIntegrationEvent(eventType, payload, meta = {}) {
 
 app.get('/api/state', async (req, res) => {
     try {
-        const projects = await getProjectsWithTasks();
-        const finances = await selectRows('finances', { order: 'date.desc' });
-        const activities = await selectRows('activities', { order: 'date.desc', limit: 50 });
-        const notes = await selectRows('notes', { order: 'created_at.desc' });
-        const folders = await selectRows('note_folders', { columns: 'name' });
-        const timeSetting = await selectOneRow('settings', { filters: { key: 'globalTimeSpent' } });
-        const folderColorsSetting = await selectOneRow('settings', { filters: { key: 'noteFolderColors' } });
-        const businessNotifications = await getBusinessNotifications(50);
-        let integrations = [];
-        let integrationEvents = [];
-        try {
-            integrations = await getIntegrations();
-            integrationEvents = await selectRows('integration_events', { order: 'created_at.desc', limit: 20 });
-        } catch (integrationError) {
-            console.warn('Integrations tables not available yet:', integrationError.message);
-        }
+        const safeRows = async (loader, fallback = []) => {
+            try {
+                return await loader();
+            } catch (err) {
+                console.warn('Estado parcial: no se pudo cargar un bloque del CRM:', err.message);
+                return fallback;
+            }
+        };
+
+        const projects = await safeRows(() => getProjectsWithTasks(), []);
+        const finances = await safeRows(() => selectRows('finances', { order: 'date.desc' }), []);
+        const activities = await safeRows(() => selectRows('activities', { order: 'date.desc', limit: 50 }), []);
+        const notes = await safeRows(() => selectRows('notes', { order: 'created_at.desc' }), []);
+        const folders = await safeRows(() => selectRows('note_folders', { columns: 'name' }), []);
+        const timeSetting = await safeRows(
+            () => selectOneRow('settings', { filters: { key: 'globalTimeSpent' } }),
+            null
+        );
+        const folderColorsSetting = await safeRows(
+            () => selectOneRow('settings', { filters: { key: 'noteFolderColors' } }),
+            null
+        );
+        const businessNotifications = await safeRows(() => getBusinessNotifications(50), []);
+        const integrations = await safeRows(() => getIntegrations(), []);
+        const integrationEvents = await safeRows(
+            () => selectRows('integration_events', { order: 'created_at.desc', limit: 20 }),
+            []
+        );
         let noteFolderColors = {};
         if (folderColorsSetting && folderColorsSetting.value) {
             try {
