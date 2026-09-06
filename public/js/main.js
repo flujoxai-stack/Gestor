@@ -24,6 +24,18 @@ let state = {
 };
 
 // ========================================================
+// ÍCONOS
+// ========================================================
+// Antes: emojis (🗑️ ✏️ 📅 📋) mezclados con el resto de la interfaz, que
+// usa íconos de línea (stroke) en todos lados. Se ven distinto en cada
+// sistema operativo/fuente y no combinan con nada — estos SVG son los
+// mismos trazos que ya usa el sidebar, solo que en tamaño de acción.
+const ICON_TRASH = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
+const ICON_EDIT = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>';
+const ICON_CALENDAR = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>';
+const ICON_ACTIVITY = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>';
+
+// ========================================================
 // SINCRONIZACIÓN CON API (reemplaza localStorage)
 // ========================================================
 
@@ -114,7 +126,7 @@ function renderActivityFeed() {
         const dateStr = a.date ? new Date(a.date).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '';
         div.innerHTML = `
             <div class="item-left">
-                <div style="width:32px;height:32px;border-radius:50%;background:var(--main-bg);display:flex;align-items:center;justify-content:center;color:var(--sidebar-active);font-size:1rem;flex-shrink:0;">📋</div>
+                <div style="width:32px;height:32px;border-radius:50%;background:var(--main-bg);display:flex;align-items:center;justify-content:center;color:var(--sidebar-active);flex-shrink:0;">${ICON_ACTIVITY}</div>
                 <div style="display:flex;flex-direction:column;justify-content:center;">
                     <div style="font-size:0.85rem;font-weight:600;">${escapeHtml(a.title)}</div>
                     <small style="font-size:0.7rem;color:var(--text-muted);">${escapeHtml(a.desc || '')}</small>
@@ -293,7 +305,7 @@ window.startGestorApp = async function startGestorApp() {
         const upList=document.getElementById('upcoming-tasks-list');
         upList.innerHTML='';
         upcoming.slice(0,4).forEach(u=>{
-            upList.innerHTML+=`<div class="custom-list-item"><div class="item-left"><div style="width:30px;height:30px;border-radius:50%;background:rgba(31, 111, 120,0.12);display:flex;align-items:center;justify-content:center;color:#1f6f78;font-size:0.8rem;flex-shrink:0;">📅</div> <div style="display:flex; flex-direction:column; justify-content:center;"><div style="font-size:0.85rem;line-height:1.2;font-weight:600;">${escapeHtml(u.title)}</div><small style="font-size:0.7rem;color:var(--text-muted);">${escapeHtml(u.pName)}</small></div></div><div class="item-right" style="font-size:0.8rem;color:var(--text-muted);text-align:right;">${escapeHtml(u.date)}</div></div>`;
+            upList.innerHTML+=`<div class="custom-list-item"><div class="item-left"><div style="width:30px;height:30px;border-radius:50%;background:rgba(31, 111, 120,0.12);display:flex;align-items:center;justify-content:center;color:#1f6f78;flex-shrink:0;">${ICON_CALENDAR}</div> <div style="display:flex; flex-direction:column; justify-content:center;"><div style="font-size:0.85rem;line-height:1.2;font-weight:600;">${escapeHtml(u.title)}</div><small style="font-size:0.7rem;color:var(--text-muted);">${escapeHtml(u.pName)}</small></div></div><div class="item-right" style="font-size:0.8rem;color:var(--text-muted);text-align:right;">${escapeHtml(u.date)}</div></div>`;
         });
         if(upcoming.length===0)upList.innerHTML='<p class="text-muted small mt-2">No hay tareas pendientes con fecha.</p>';
 
@@ -456,7 +468,7 @@ window.startGestorApp = async function startGestorApp() {
             }
             const hasWarranty = !!(wStart || wEnd);
             const el=document.createElement('div'); el.className='col';
-            el.innerHTML=`<div class="project-card" onclick="openProject('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div style="width:42px;height:42px;border-radius:12px;background:var(--main-bg);color:var(--sidebar-active);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg></div><div style="display:flex;align-items:center;gap:8px;"><span class="metric-badge" style="background:var(--main-bg);color:var(--text-muted);font-size:0.75rem;">${progress}%</span><button class="btn-action-icon" style="padding:4px;${hasWarranty ? 'color:#3f7d58;' : ''}" onclick="openEditWarranty('${p.id}',event)" title="${hasWarranty ? 'Garantía asignada' : 'Asignar garantía'}"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg></button><button class="btn-action-icon btn-action-delete" style="padding:4px;" onclick="deleteProject('${p.id}',event)" title="Eliminar Proyecto">🗑️</button></div></div><h5 style="color:var(--text-main);font-weight:600;margin-bottom:0.2rem;">${escapeHtml(p.name)}</h5><p class="text-muted small m-0">${p.tasks.length} Tareas</p>${datesHtml}<div style="width:100%;background-color:var(--border-color);height:6px;border-radius:4px;margin-top:1rem;overflow:hidden;"><div style="width:${progress}%;background-color:${progress===100?'#3f7d58':'var(--sidebar-active)'};height:100%;transition:width 0.3s ease;"></div></div></div>`;
+            el.innerHTML=`<div class="project-card" onclick="openProject('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div style="width:42px;height:42px;border-radius:12px;background:var(--main-bg);color:var(--sidebar-active);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg></div><div style="display:flex;align-items:center;gap:8px;"><span class="metric-badge" style="background:var(--main-bg);color:var(--text-muted);font-size:0.75rem;">${progress}%</span><button class="btn-action-icon" style="padding:4px;${hasWarranty ? 'color:#3f7d58;' : ''}" onclick="openEditWarranty('${p.id}',event)" title="${hasWarranty ? 'Garantía asignada' : 'Asignar garantía'}"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg></button><button class="btn-action-icon btn-action-delete" style="padding:4px;" onclick="deleteProject('${p.id}',event)" title="Eliminar Proyecto">${ICON_TRASH}</button></div></div><h5 style="color:var(--text-main);font-weight:600;margin-bottom:0.2rem;">${escapeHtml(p.name)}</h5><p class="text-muted small m-0">${p.tasks.length} Tareas</p>${datesHtml}<div style="width:100%;background-color:var(--border-color);height:6px;border-radius:4px;margin-top:1rem;overflow:hidden;"><div style="width:${progress}%;background-color:${progress===100?'#3f7d58':'var(--sidebar-active)'};height:100%;transition:width 0.3s ease;"></div></div></div>`;
             list.appendChild(el);
         });
     }
@@ -544,8 +556,8 @@ window.startGestorApp = async function startGestorApp() {
         p.tasks.forEach(t=>{
             counts[t.status]++;
             const card=document.createElement('div'); card.className='task-card'; card.dataset.id=t.id;
-            const dateHtml=t.dueDate?`<div style="margin-bottom:4px;">📅 ${escapeHtml(t.dueDate)}</div>`:'';
-            card.innerHTML=`<div class="task-title">${escapeHtml(t.title)}</div><div class="task-footer"><div class="task-meta">${dateHtml}<span class="priority-badge priority-${escapeHtml(t.priority)}">${escapeHtml(t.priority)}</span></div><div class="d-flex"><button class="btn-action-icon btn-action-delete" onclick="deleteTaskDirectly('${t.id}',event)" title="Eliminar">🗑️</button><button class="btn-action-icon" onclick="editTask('${t.id}',event)" title="Editar">✏️</button></div></div>`;
+            const dateHtml=t.dueDate?`<div style="margin-bottom:4px;">${ICON_CALENDAR} ${escapeHtml(t.dueDate)}</div>`:'';
+            card.innerHTML=`<div class="task-title">${escapeHtml(t.title)}</div><div class="task-footer"><div class="task-meta">${dateHtml}<span class="priority-badge priority-${escapeHtml(t.priority)}">${escapeHtml(t.priority)}</span></div><div class="d-flex"><button class="btn-action-icon btn-action-delete" onclick="deleteTaskDirectly('${t.id}',event)" title="Eliminar">${ICON_TRASH}</button><button class="btn-action-icon" onclick="editTask('${t.id}',event)" title="Editar">${ICON_EDIT}</button></div></div>`;
             document.getElementById(`${t.status}-list`).appendChild(card);
         });
         Object.keys(counts).forEach(k=>document.getElementById(`count-${k}`).textContent=counts[k]);
@@ -569,8 +581,8 @@ window.startGestorApp = async function startGestorApp() {
             p.tasks.forEach(t=>{
                 counts[t.status]++;
                 const card=document.createElement('div'); card.className='task-card'; card.dataset.id=t.id;
-                const dateHtml=t.dueDate?`<div style="margin-bottom:4px;">📅 ${escapeHtml(t.dueDate)}</div>`:'';
-                card.innerHTML=`<div class="task-title">${escapeHtml(t.title)}</div><div class="task-project-tag">${escapeHtml(p.name)}</div><div class="task-footer"><div class="task-meta">${dateHtml}<span class="priority-badge priority-${escapeHtml(t.priority)}">${escapeHtml(t.priority)}</span></div><div class="d-flex"><button class="btn-action-icon btn-action-delete" onclick="deleteTaskDirectly('${t.id}',event)" title="Eliminar">🗑️</button><button class="btn-action-icon" onclick="editTask('${t.id}',event)" title="Editar">✏️</button></div></div>`;
+                const dateHtml=t.dueDate?`<div style="margin-bottom:4px;">${ICON_CALENDAR} ${escapeHtml(t.dueDate)}</div>`:'';
+                card.innerHTML=`<div class="task-title">${escapeHtml(t.title)}</div><div class="task-project-tag">${escapeHtml(p.name)}</div><div class="task-footer"><div class="task-meta">${dateHtml}<span class="priority-badge priority-${escapeHtml(t.priority)}">${escapeHtml(t.priority)}</span></div><div class="d-flex"><button class="btn-action-icon btn-action-delete" onclick="deleteTaskDirectly('${t.id}',event)" title="Eliminar">${ICON_TRASH}</button><button class="btn-action-icon" onclick="editTask('${t.id}',event)" title="Editar">${ICON_EDIT}</button></div></div>`;
                 document.getElementById(`${t.status}-list`).appendChild(card);
             });
         });
@@ -766,7 +778,7 @@ window.startGestorApp = async function startGestorApp() {
         state.finances.forEach(f=>{
             if(f.type==='income')inc+=parseFloat(f.amount);else exp+=parseFloat(f.amount);
             const tr=document.createElement('tr');
-            tr.innerHTML=`<td>${escapeHtml(f.concept)}</td><td><span class="metric-badge" style="background:${f.type==='income'?'rgba(63, 125, 88,0.1)':'rgba(180, 69, 61,0.1)'};color:${f.type==='income'?'#3f7d58':'#b4453d'}">${f.type==='income'?'Ingreso':'Gasto'}</span></td><td style="color:${f.type==='income'?'#3f7d58':'#b4453d'};font-weight:600;">${f.type==='income'?'+':'-'}$${parseFloat(f.amount).toFixed(2)}</td><td>${escapeHtml(f.date)}</td><td><button class="btn-action-icon btn-action-delete" onclick="deleteFinance('${f.id}')">🗑️</button></td>`;
+            tr.innerHTML=`<td>${escapeHtml(f.concept)}</td><td><span class="metric-badge" style="background:${f.type==='income'?'rgba(63, 125, 88,0.1)':'rgba(180, 69, 61,0.1)'};color:${f.type==='income'?'#3f7d58':'#b4453d'}">${f.type==='income'?'Ingreso':'Gasto'}</span></td><td style="color:${f.type==='income'?'#3f7d58':'#b4453d'};font-weight:600;">${f.type==='income'?'+':'-'}$${parseFloat(f.amount).toFixed(2)}</td><td>${escapeHtml(f.date)}</td><td><button class="btn-action-icon btn-action-delete" onclick="deleteFinance('${f.id}')">${ICON_TRASH}</button></td>`;
             tbody.appendChild(tr);
         });
         const incomeEl = document.getElementById('fin-income') || document.getElementById('fin-inc');
@@ -948,7 +960,7 @@ function renderNoteFolderTabs() {
                             <path d="M3 9h18"></path>
                         </svg>
                     </div>
-                    <button class="btn-action-icon btn-action-delete" onclick="deleteNote('${n.id}',event)">🗑️</button>
+                    <button class="btn-action-icon btn-action-delete" onclick="deleteNote('${n.id}',event)">${ICON_TRASH}</button>
                 </div>
                 <div class="note-folder-card-body">
                     <strong class="note-folder-card-title">${escapeHtml(n.title)}</strong>

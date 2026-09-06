@@ -404,7 +404,8 @@ body[data-auth="locked"] {
         .priority-Alta { background-color: var(--red-badge); color: var(--red-text); }
         .priority-Media { background-color: #f1e6cf; color: #8a6a1f; }
         .priority-Baja { background-color: var(--green-badge); color: var(--green-text); }
-        .btn-action-icon { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.9rem; padding: 2px 4px; transition: color 0.2s; }
+        .btn-action-icon { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; transition: color 0.2s, background-color 0.2s; }
+        .btn-action-icon:hover { background: var(--main-bg); }
         .btn-action-icon:hover { color: var(--text-main); }
         .btn-action-delete:hover { color: #b4453d; }
         .add-task-inline { background: none; border: none; color: var(--text-muted); font-size: 0.85rem; padding: 0.5rem 1rem; text-align: left; cursor: pointer; width: 100%; font-weight: 500;}
