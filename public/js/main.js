@@ -1420,6 +1420,48 @@ function renderNoteFolderTabs() {
         }
     }
 
+    // Antes esta bandeja era de solo lectura: veías el correo, lo marcabas
+    // leído y ahí terminaba — no había forma de convertir un correo real de
+    // negocio en un proyecto del Pipeline. Se guarda el vínculo dentro de
+    // "notes" (no hay una columna dedicada) para no crear el proyecto dos
+    // veces si ya se convirtió.
+    function convertedProjectId(mail) {
+        const match = String(mail?.notes || '').match(/\[proyecto:([^\]]+)\]/);
+        return match ? match[1] : null;
+    }
+
+    window.convertMailToProject = async function (id) {
+        const mail = state.businessNotifications.find((item) => String(item.id) === String(id));
+        if (!mail) return;
+
+        const existingId = convertedProjectId(mail);
+        if (existingId) {
+            const existing = state.projects.find((p) => String(p.id) === String(existingId));
+            if (existing) { window.openProject(existing.id); return; }
+        }
+
+        const defaultName = mail.from_name || mail.from_email || mail.subject || 'Nuevo prospecto';
+        const name = prompt('Nombre del proyecto:', defaultName);
+        if (!name || !name.trim()) return;
+
+        try {
+            const newProject = await api.createProject({ name: name.trim(), status: 'lead', start_date: '', end_date: '' });
+            state.projects.push(newProject);
+            const notesMarker = `[proyecto:${newProject.id}] Convertido desde el correo de ${mail.from_name || mail.from_email || 'remitente desconocido'}.`;
+            await api.updateBusinessNotification(id, { is_read: true, notes: notesMarker });
+            await refreshBusinessMailState();
+            renderBusinessMail();
+            if (String(currentBusinessMailId) === String(id)) {
+                document.getElementById('business-mail-convert-btn').textContent = 'Ver proyecto';
+            }
+            if (navLinks.pipeline.classList.contains('active')) renderPipeline();
+            if (window.logActivity) window.logActivity('Proyecto creado desde correo', name.trim());
+            showToast(`Proyecto "${name.trim()}" creado en Pipeline`);
+        } catch (e) {
+            alert('Error al convertir el correo en proyecto: ' + e.message);
+        }
+    };
+
     function renderBusinessMail() {
         const body = document.getElementById('business-mail-body');
         const totalEl = document.getElementById('business-mail-count');
@@ -1455,14 +1497,14 @@ function renderNoteFolderTabs() {
                 </td>
                 <td><span class="badge rounded-pill ${mail.label === 'negocios' ? 'bg-success' : 'bg-secondary'}">${escapeHtml(mail.label || '--')}</span></td>
                 <td><span class="badge rounded-pill ${mail.is_read ? 'bg-secondary' : 'bg-warning text-dark'}">${mail.is_read ? 'Leído' : 'Nuevo'}</span></td>
-                <td>
+                <td class="text-nowrap">
                     <button class="btn btn-sm btn-outline-primary me-2" data-action="view">Ver</button>
-                    <button class="btn btn-sm btn-outline-success" data-action="toggle">${mail.is_read ? 'No leído' : 'Leído'}</button>
+                    <button class="btn btn-sm btn-outline-success me-2" data-action="toggle">${mail.is_read ? 'No leído' : 'Leído'}</button>
+                    <button class="btn btn-sm" style="background-color: var(--sidebar-active); color:#fff; border:none;" data-action="convert">${convertedProjectId(mail) ? 'Ver proyecto' : '+ Proyecto'}</button>
                 </td>`;
             tr.addEventListener('click', async (event) => {
                 const target = event.target;
-                if (target && target.matches('[data-action="toggle"]')) return;
-                if (target && target.matches('[data-action="view"]')) return;
+                if (target && target.closest('[data-action]')) return;
                 openBusinessMailModal(mail);
             });
             tr.querySelector('[data-action="view"]').addEventListener('click', () => openBusinessMailModal(mail));
@@ -1475,6 +1517,7 @@ function renderNoteFolderTabs() {
                     alert('Error al actualizar correo: ' + err.message);
                 }
             });
+            tr.querySelector('[data-action="convert"]').addEventListener('click', () => window.convertMailToProject(mail.id));
             body.appendChild(tr);
         });
     }
@@ -1493,6 +1536,7 @@ function renderNoteFolderTabs() {
         document.getElementById('business-mail-body-text').value = mail.body || '';
         document.getElementById('business-mail-url').value = mail.url || '';
         document.getElementById('business-mail-toggle-read-btn').textContent = mail.is_read ? 'Marcar no leído' : 'Marcar leído';
+        document.getElementById('business-mail-convert-btn').textContent = convertedProjectId(mail) ? 'Ver proyecto' : 'Convertir en proyecto';
         businessMailModal.show();
     }
 
@@ -1502,6 +1546,10 @@ function renderNoteFolderTabs() {
     };
 
     window.openBusinessMailModal = openBusinessMailModal;
+
+    document.getElementById('business-mail-convert-btn').addEventListener('click', () => {
+        if (currentBusinessMailId) window.convertMailToProject(currentBusinessMailId);
+    });
 
     document.getElementById('business-mail-toggle-read-btn').addEventListener('click', async () => {
         if (!currentBusinessMailId) return;
