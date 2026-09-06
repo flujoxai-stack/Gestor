@@ -12,6 +12,37 @@ const {
     updateRows,
     deleteRows,
 } = require('./database');
+const {
+    projectSchema,
+    taskCreateSchema,
+    taskUpdateSchema,
+    financeSchema,
+    activitySchema,
+    noteSchema,
+    noteUpdateSchema,
+    folderSchema,
+    settingSchema,
+    integrationSchema,
+    businessNotificationUpdateSchema,
+    businessEmailWebhookSchema,
+} = require('./schemas');
+const { assertPublicWebhookUrl } = require('./security');
+
+// SEC-04: valida req.body contra un esquema Zod antes de tocar la base de
+// datos. Si no encaja, responde 400 con el detalle de qué campo falló.
+function validateBody(schema) {
+    return (req, res, next) => {
+        const result = schema.safeParse(req.body);
+        if (!result.success) {
+            return res.status(400).json({
+                error: 'Datos inválidos',
+                details: result.error.issues.map((issue) => `${issue.path.join('.') || 'body'}: ${issue.message}`),
+            });
+        }
+        req.body = result.data;
+        next();
+    };
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,7 +62,22 @@ if (AUTH_ALLOWED_EMAILS.length === 0) {
 }
 const INTEGRATION_DEFAULT_EVENTS = ['project.created', 'project.updated', 'project.deleted', 'task.created', 'task.updated', 'task.deleted', 'finance.created', 'finance.deleted', 'note.created', 'note.updated', 'note.deleted', 'folder.created', 'business.email.received'];
 
-app.use(cors());
+// SEC-07: antes cors() sin opciones respondía Access-Control-Allow-Origin: *
+// para toda la API. Esta app la usa una sola persona desde un único
+// dominio, así que se restringe a ese origen (+ localhost en desarrollo).
+const ALLOWED_ORIGINS = [
+    'https://gestor-flame.vercel.app',
+    ...(process.env.EXTRA_ALLOWED_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean),
+];
+app.use(cors({
+    origin(origin, callback) {
+        // Sin header Origin (curl, apps nativas, misma-origen) o localhost: permitir.
+        if (!origin || /^https?:\/\/localhost(:\d+)?$/.test(origin) || ALLOWED_ORIGINS.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error('Origen no permitido por CORS'));
+    },
+}));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -251,6 +297,9 @@ async function emitIntegrationEvent(eventType, payload, meta = {}) {
                 let status = 'sent';
                 let responseText = '';
                 try {
+                    // SEC-05: revalidar en el momento del envío, no solo al guardar
+                    // (el DNS del endpoint pudo cambiar después de crear la integración).
+                    await assertPublicWebhookUrl(integration.endpoint);
                     const response = await fetch(integration.endpoint, {
                         method: integration.method || 'POST',
                         headers,
@@ -342,7 +391,7 @@ app.get('/api/projects', async (req, res) => {
     }
 });
 
-app.post('/api/projects', async (req, res) => {
+app.post('/api/projects', validateBody(projectSchema), async (req, res) => {
     const { id, name, status, start_date, end_date, warranty_start, warranty_end } = req.body;
     try {
         const existing = await selectRows('projects', { columns: 'id' });
@@ -368,7 +417,7 @@ app.post('/api/projects', async (req, res) => {
     }
 });
 
-app.put('/api/projects/:id', async (req, res) => {
+app.put('/api/projects/:id', validateBody(projectSchema), async (req, res) => {
     const { name, status, start_date, end_date, warranty_start, warranty_end } = req.body;
     try {
         const projectRecord = {
@@ -412,7 +461,7 @@ app.get('/api/tasks', async (req, res) => {
     }
 });
 
-app.post('/api/tasks', async (req, res) => {
+app.post('/api/tasks', validateBody(taskCreateSchema), async (req, res) => {
     const { id, project_id, title, description, status, priority, due_date } = req.body;
     try {
         const taskRecord = {
@@ -436,7 +485,7 @@ app.post('/api/tasks', async (req, res) => {
     }
 });
 
-app.put('/api/tasks/:id', async (req, res) => {
+app.put('/api/tasks/:id', validateBody(taskUpdateSchema), async (req, res) => {
     const { title, description, status, priority, due_date } = req.body;
     try {
         const taskRecord = {
@@ -478,7 +527,7 @@ app.get('/api/finances', async (req, res) => {
     }
 });
 
-app.post('/api/finances', async (req, res) => {
+app.post('/api/finances', validateBody(financeSchema), async (req, res) => {
     const { id, concept, type, amount, date, project_id } = req.body;
     try {
         const financeRecord = {
@@ -520,7 +569,7 @@ app.get('/api/activities', async (req, res) => {
     }
 });
 
-app.post('/api/activities', async (req, res) => {
+app.post('/api/activities', validateBody(activitySchema), async (req, res) => {
     const { id, title, desc, date } = req.body;
     try {
         await upsertRow(
@@ -548,7 +597,7 @@ app.get('/api/notes', async (req, res) => {
     }
 });
 
-app.post('/api/notes', async (req, res) => {
+app.post('/api/notes', validateBody(noteSchema), async (req, res) => {
     const { id, title, content, folder, color, created_at } = req.body;
     try {
         const noteRecord = {
@@ -571,7 +620,7 @@ app.post('/api/notes', async (req, res) => {
     }
 });
 
-app.put('/api/notes/:id', async (req, res) => {
+app.put('/api/notes/:id', validateBody(noteUpdateSchema), async (req, res) => {
     const { title, content, folder, color } = req.body;
     try {
         const noteRecord = {
@@ -612,7 +661,7 @@ app.get('/api/folders', async (req, res) => {
     }
 });
 
-app.post('/api/folders', async (req, res) => {
+app.post('/api/folders', validateBody(folderSchema), async (req, res) => {
     const { name, color } = req.body;
     try {
         await upsertRow(
@@ -651,7 +700,7 @@ app.get('/api/settings/:key', async (req, res) => {
     }
 });
 
-app.post('/api/settings', async (req, res) => {
+app.post('/api/settings', validateBody(settingSchema), async (req, res) => {
     const { key, value } = req.body;
     try {
         await upsertRow(
@@ -686,35 +735,21 @@ app.get('/api/integration-events', async (req, res) => {
     }
 });
 
-app.post('/api/integrations', async (req, res) => {
-    const {
-        id,
-        name,
-        type = 'webhook',
-        endpoint = '',
-        secret = '',
-        enabled = true,
-        events = ['all'],
-        headers = {},
-        method = 'POST',
-    } = req.body || {};
+app.post('/api/integrations', validateBody(integrationSchema), async (req, res) => {
+    const { id, name, type, endpoint, secret, enabled, events, headers, method } = req.body;
+    try {
+        await assertPublicWebhookUrl(endpoint);
+    } catch (err) {
+        return res.status(400).json({ error: err.message });
+    }
     try {
         const now = integrationNow();
         const record = {
             id: id || `${Date.now()}`,
             name,
             type,
-            enabled: enabled === true || enabled === 'true' || enabled === 1 || enabled === '1',
-            config: JSON.stringify({
-                endpoint,
-                secret,
-                method,
-                events: Array.isArray(events) ? events : String(events || '')
-                    .split(',')
-                    .map((item) => item.trim())
-                    .filter(Boolean),
-                headers,
-            }),
+            enabled,
+            config: JSON.stringify({ endpoint, secret, method, events, headers }),
             created_at: now,
             updated_at: now,
         };
@@ -725,17 +760,13 @@ app.post('/api/integrations', async (req, res) => {
     }
 });
 
-app.put('/api/integrations/:id', async (req, res) => {
-    const {
-        name,
-        type = 'webhook',
-        endpoint = '',
-        secret = '',
-        enabled = true,
-        events = ['all'],
-        headers = {},
-        method = 'POST',
-    } = req.body || {};
+app.put('/api/integrations/:id', validateBody(integrationSchema), async (req, res) => {
+    const { name, type, endpoint, secret, enabled, events, headers, method } = req.body;
+    try {
+        await assertPublicWebhookUrl(endpoint);
+    } catch (err) {
+        return res.status(400).json({ error: err.message });
+    }
     try {
         await updateRows(
             'integrations',
@@ -743,17 +774,8 @@ app.put('/api/integrations/:id', async (req, res) => {
             {
                 name,
                 type,
-                enabled: enabled === true || enabled === 'true' || enabled === 1 || enabled === '1',
-                config: JSON.stringify({
-                    endpoint,
-                    secret,
-                    method,
-                    events: Array.isArray(events) ? events : String(events || '')
-                        .split(',')
-                        .map((item) => item.trim())
-                        .filter(Boolean),
-                    headers,
-                }),
+                enabled,
+                config: JSON.stringify({ endpoint, secret, method, events, headers }),
                 updated_at: integrationNow(),
             }
         );
@@ -803,6 +825,7 @@ app.post('/api/integrations/:id/test', async (req, res) => {
                         .update(payload)
                         .digest('hex')}`;
                 }
+                await assertPublicWebhookUrl(normalized.endpoint);
                 const response = await fetch(normalized.endpoint, {
                     method: normalized.method || 'POST',
                     headers,
@@ -841,7 +864,7 @@ app.get('/api/business-notifications', async (req, res) => {
     }
 });
 
-app.put('/api/business-notifications/:id', async (req, res) => {
+app.put('/api/business-notifications/:id', validateBody(businessNotificationUpdateSchema), async (req, res) => {
     const { is_read, label, notes } = req.body || {};
     try {
         await updateRows(
@@ -871,7 +894,14 @@ app.post('/webhooks/n8n/business-email', async (req, res) => {
             return res.status(401).json({ error: 'Invalid webhook secret' });
         }
 
-        const payload = req.body || {};
+        const parsed = businessEmailWebhookSchema.safeParse(req.body);
+        if (!parsed.success) {
+            return res.status(400).json({
+                error: 'Payload inválido',
+                details: parsed.error.issues.map((issue) => `${issue.path.join('.') || 'body'}: ${issue.message}`),
+            });
+        }
+        const payload = parsed.data;
         const record = {
             id: String(payload.id || payload.message_id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
             source: String(payload.source || 'gmail'),
