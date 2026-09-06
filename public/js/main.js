@@ -304,18 +304,35 @@ window.startGestorApp = async function startGestorApp() {
 
         const txtColor = document.body.dataset.theme === 'dark' ? '#9aa1ac' : '#6b7280';
         const gridColor = document.body.dataset.theme === 'dark' ? '#2e333b' : '#e2e5e9';
+        const pendingColor = document.body.dataset.theme === 'dark' ? '#3a3f47' : '#e2e5e9';
 
+        // Una barra sola por proyecto se veía muy "seca" con pocos
+        // proyectos. Se agrega una segunda barra gris al lado con lo
+        // pendiente (100 - % completado), como referencia visual detrás
+        // de la barra de color — le da al gráfico el mismo aire que un
+        // bar chart real con varias series en vez de un solo dato suelto.
         progressChart = new Chart(canvas, {
             type: 'bar',
             data: {
                 labels: rows.map((p) => p.name),
-                datasets: [{
-                    data: rows.map((p) => p.pct),
-                    backgroundColor: colors,
-                    borderRadius: 8,
-                    borderSkipped: false,
-                    maxBarThickness: 40
-                }]
+                datasets: [
+                    {
+                        label: 'Pendiente',
+                        data: rows.map((p) => 100 - p.pct),
+                        backgroundColor: pendingColor,
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        maxBarThickness: 28
+                    },
+                    {
+                        label: 'Completado',
+                        data: rows.map((p) => p.pct),
+                        backgroundColor: colors,
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        maxBarThickness: 28
+                    }
+                ]
             },
             options: {
                 responsive: true,
@@ -331,12 +348,19 @@ window.startGestorApp = async function startGestorApp() {
                     }
                 },
                 plugins: {
-                    legend: { display: false },
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        align: 'end',
+                        labels: { color: txtColor, boxWidth: 10, boxHeight: 10, usePointStyle: true, pointStyle: 'circle', font: { size: 11 } }
+                    },
                     tooltip: {
                         callbacks: {
                             label: (ctx) => {
                                 const p = rows[ctx.dataIndex];
-                                return `${p.pct}% completado (${p.done}/${p.total} tareas)`;
+                                return ctx.datasetIndex === 1
+                                    ? `${p.pct}% completado (${p.done}/${p.total} tareas)`
+                                    : `${100 - p.pct}% pendiente (${p.total - p.done}/${p.total} tareas)`;
                             }
                         }
                     }
