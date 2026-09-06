@@ -125,6 +125,17 @@ const api = {
         if (!res.ok) throw new Error('Error creando movimiento');
         return { ...data, id: String(id) };
     },
+    async updateFinance(id, data) {
+        // El endpoint POST hace upsert por id: pasarle un id existente
+        // actualiza ese registro en vez de crear uno nuevo.
+        const res = await apiFetch(`${API_URL}/finances`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...data, id: String(id) })
+        });
+        if (!res.ok) throw new Error('Error actualizando movimiento');
+        return { ...data, id: String(id) };
+    },
     async deleteFinance(id) {
         const res = await apiFetch(`${API_URL}/finances/${id}`, { method: 'DELETE' });
         if (!res.ok) throw new Error('Error eliminando movimiento');

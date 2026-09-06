@@ -805,45 +805,138 @@ window.startGestorApp = async function startGestorApp() {
     });
 
     // ---- FINANZAS ----
+    let currentFinanceFilter = 'all';
+    window.setFinanceFilter = function(btn, filterType) {
+        document.querySelectorAll('#finance-filters .filter-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFinanceFilter = filterType;
+        renderFinances();
+    };
+
+    // Antes no había forma de ver qué proyecto/cliente generó cada ingreso
+    // en conjunto — esto es lo que hace útil el valor en $ que ya se
+    // muestra en el Pipeline.
+    function renderFinanceByProject() {
+        const container = document.getElementById('finance-by-project');
+        if (!container) return;
+        const totals = new Map();
+        state.finances.forEach((f) => {
+            if (f.type !== 'income') return;
+            const key = f.project_id || '';
+            totals.set(key, (totals.get(key) || 0) + (parseFloat(f.amount) || 0));
+        });
+        const rows = [...totals.entries()]
+            .map(([projectId, amount]) => ({
+                name: projectId ? (state.projects.find((p) => String(p.id) === String(projectId))?.name || 'Proyecto eliminado') : 'Sin proyecto asignado',
+                amount,
+            }))
+            .sort((a, b) => b.amount - a.amount);
+        container.innerHTML = rows.length
+            ? rows.map((r) => `<div class="custom-list-item"><div class="item-left">${escapeHtml(r.name)}</div><div class="item-right">$${r.amount.toFixed(2)}</div></div>`).join('')
+            : '<p class="text-muted small mt-2">Todavía no hay ingresos registrados.</p>';
+    }
+
+    function populateFinanceProjectSelect(selectedId) {
+        const sel = document.getElementById('fin-project-input');
+        if (!sel) return;
+        sel.innerHTML = '<option value="">Sin proyecto</option>' +
+            state.projects.map((p) => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+        sel.value = selectedId || '';
+    }
+
     function renderFinances() {
-        const tbody =
-            document.getElementById('finance-table-body') ||
-            document.getElementById('finances-table-body');
+        const tbody = document.getElementById('finance-table-body');
         if (!tbody) return;
         tbody.innerHTML = '';
         let inc=0,exp=0;
         state.finances.forEach(f=>{
             if(f.type==='income')inc+=parseFloat(f.amount);else exp+=parseFloat(f.amount);
+        });
+        const filtered = state.finances.filter((f) => currentFinanceFilter === 'all' || f.type === currentFinanceFilter);
+        filtered.forEach(f=>{
+            const project = state.projects.find((p) => String(p.id) === String(f.project_id));
             const tr=document.createElement('tr');
-            tr.innerHTML=`<td>${escapeHtml(f.concept)}</td><td><span class="metric-badge" style="background:${f.type==='income'?'rgba(63, 125, 88,0.1)':'rgba(180, 69, 61,0.1)'};color:${f.type==='income'?'#3f7d58':'#b4453d'}">${f.type==='income'?'Ingreso':'Gasto'}</span></td><td style="color:${f.type==='income'?'#3f7d58':'#b4453d'};font-weight:600;">${f.type==='income'?'+':'-'}$${parseFloat(f.amount).toFixed(2)}</td><td>${escapeHtml(f.date)}</td><td><button class="btn-action-icon btn-action-delete" onclick="deleteFinance('${f.id}')">${ICON_TRASH}</button></td>`;
+            tr.innerHTML=`<td>${escapeHtml(f.date)}</td><td>${escapeHtml(f.concept)}</td><td>${project ? escapeHtml(project.name) : '<span class="text-muted">—</span>'}</td><td><span class="metric-badge" style="background:${f.type==='income'?'rgba(63, 125, 88,0.1)':'rgba(180, 69, 61,0.1)'};color:${f.type==='income'?'#3f7d58':'#b4453d'}">${f.type==='income'?'Ingreso':'Gasto'}</span></td><td style="color:${f.type==='income'?'#3f7d58':'#b4453d'};font-weight:600;">${f.type==='income'?'+':'-'}$${parseFloat(f.amount).toFixed(2)}</td><td class="text-end text-nowrap"><button class="btn-action-icon" onclick="editFinance('${f.id}')" title="Editar">${ICON_EDIT}</button><button class="btn-action-icon btn-action-delete" onclick="deleteFinance('${f.id}')" title="Eliminar">${ICON_TRASH}</button></td>`;
             tbody.appendChild(tr);
         });
-        const incomeEl = document.getElementById('fin-income') || document.getElementById('fin-inc');
-        const expenseEl = document.getElementById('fin-expense') || document.getElementById('fin-exp');
-        const balanceEl = document.getElementById('fin-balance') || document.getElementById('fin-bal');
+        if (!filtered.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-muted small">No hay movimientos que coincidan con este filtro.</td></tr>';
+        }
+        const incomeEl = document.getElementById('fin-income');
+        const expenseEl = document.getElementById('fin-expense');
+        const balanceEl = document.getElementById('fin-balance');
         if (incomeEl) incomeEl.textContent = `$${inc.toFixed(2)}`;
         if (expenseEl) expenseEl.textContent = `$${exp.toFixed(2)}`;
         if (balanceEl) balanceEl.textContent = `$${(inc-exp).toFixed(2)}`;
+        renderFinanceByProject();
     }
 
     const addFinanceModal=new bootstrap.Modal(document.getElementById('addFinanceModal'));
+
+    // "+ Nuevo Movimiento" siempre debe abrir el modal en blanco, aunque el
+    // usuario acabe de editar otro movimiento.
+    document.getElementById('new-finance-btn').addEventListener('click', () => {
+        document.getElementById('fin-id-input').value = '';
+        document.getElementById('finance-modal-title').textContent = 'Nuevo Movimiento';
+        document.getElementById('fin-concept-input').value = '';
+        document.getElementById('fin-type-input').value = 'income';
+        document.getElementById('fin-amount-input').value = '';
+        document.getElementById('fin-date-input').value = '';
+        populateFinanceProjectSelect();
+        document.getElementById('delete-finance-btn').style.display = 'none';
+    });
+
+    window.editFinance = function(id) {
+        const f = state.finances.find((x) => x.id === id);
+        if (!f) return;
+        document.getElementById('fin-id-input').value = f.id;
+        document.getElementById('finance-modal-title').textContent = 'Editar Movimiento';
+        document.getElementById('fin-concept-input').value = f.concept;
+        document.getElementById('fin-type-input').value = f.type;
+        document.getElementById('fin-amount-input').value = f.amount;
+        document.getElementById('fin-date-input').value = f.date;
+        populateFinanceProjectSelect(f.project_id);
+        document.getElementById('delete-finance-btn').style.display = '';
+        addFinanceModal.show();
+    };
+
     document.getElementById('add-finance-btn').addEventListener('click', async ()=>{
+        const id=document.getElementById('fin-id-input').value;
         const concept=document.getElementById('fin-concept-input').value.trim();
         const type=document.getElementById('fin-type-input').value;
         const amount=parseFloat(document.getElementById('fin-amount-input').value);
         const date=document.getElementById('fin-date-input').value;
+        const project_id=document.getElementById('fin-project-input').value || null;
         if(!concept||!amount||!date)return;
         try {
-            const newFin=await api.createFinance({concept,type,amount,date});
-            state.finances.unshift(newFin);
-            if(window.logActivity)window.logActivity('Movimiento Registrado', `${concept} - $${amount}`);
+            if (id) {
+                await api.updateFinance(id, { concept, type, amount, date, project_id });
+                const f = state.finances.find((x) => x.id === id);
+                if (f) Object.assign(f, { concept, type, amount, date, project_id });
+                if(window.logActivity)window.logActivity('Movimiento Actualizado', `${concept} - $${amount}`);
+            } else {
+                const newFin=await api.createFinance({concept,type,amount,date,project_id});
+                state.finances.unshift(newFin);
+                if(window.logActivity)window.logActivity('Movimiento Registrado', `${concept} - $${amount}`);
+            }
             addFinanceModal.hide();
-            document.getElementById('fin-concept-input').value='';
-            document.getElementById('fin-amount-input').value='';
-            document.getElementById('fin-date-input').value='';
             renderFinances();
             if(navLinks.dashboard.classList.contains('active'))renderDashboard();
+            if(navLinks.pipeline.classList.contains('active'))renderPipeline();
         } catch(e){ alert('Error al guardar movimiento: '+e.message); }
+    });
+
+    document.getElementById('delete-finance-btn').addEventListener('click', async () => {
+        const id = document.getElementById('fin-id-input').value;
+        if (!id || !confirm('¿Eliminar este movimiento?')) return;
+        try {
+            await api.deleteFinance(id);
+            state.finances = state.finances.filter((f) => f.id !== id);
+            addFinanceModal.hide();
+            renderFinances();
+            if(navLinks.dashboard.classList.contains('active'))renderDashboard();
+            if(navLinks.pipeline.classList.contains('active'))renderPipeline();
+        } catch(e){ alert('Error al eliminar: '+e.message); }
     });
 
     window.deleteFinance=async function(id){
@@ -853,6 +946,7 @@ window.startGestorApp = async function startGestorApp() {
                 state.finances=state.finances.filter(f=>f.id!==id);
                 renderFinances();
                 if(navLinks.dashboard.classList.contains('active'))renderDashboard();
+                if(navLinks.pipeline.classList.contains('active'))renderPipeline();
             } catch(e){ alert('Error al eliminar: '+e.message); }
         }
     };
