@@ -724,6 +724,9 @@ window.startGestorApp = async function startGestorApp() {
         calendar=new FullCalendar.Calendar(calEl,{
             initialView:'dayGridMonth', locale:'es',
             headerToolbar:{left:'prev,next today',center:'title',right:'dayGridMonth,timeGridWeek'},
+            // Los botones nunca se tradujeron pese a locale:'es' (se
+            // quedaban en "today/month/week" en inglés).
+            buttonText:{ today:'Hoy', month:'Mes', week:'Semana', day:'Día', list:'Lista' },
             events, height:650,
             eventClick:function(info){ state.currentProjectId=info.event.extendedProps.projId; window.editTask(info.event.id,new Event('click')); }
         });

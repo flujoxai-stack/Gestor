@@ -542,9 +542,63 @@ body[data-auth="locked"] {
         .form-control, .form-select { background-color: var(--main-bg); color: var(--text-main); border-color: var(--border-color); border-radius: 10px; padding: 0.6rem 1rem;}
         body[data-theme="dark"] .btn-close { filter: invert(1); }
 
-        #calendar-container { background-color: var(--card-bg); border-radius: var(--border-radius); padding: 1.5rem; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color); height: 70vh; }
+        /* Calendario: FullCalendar trae su propio look (enlaces azules
+           subrayados, botones planos negros) que no pasaba por ninguna
+           variable de la app. Este bloque lo pone en el mismo sistema que
+           el resto — mismos tokens de color, misma tipografía, mismos
+           bordes — en vez de convivir dos estilos visuales distintos. */
+        #calendar-container {
+            background-color: var(--card-bg); border-radius: var(--border-radius);
+            padding: 1.5rem; box-shadow: var(--shadow-sm); border: 1px solid var(--border-color);
+            height: 70vh; font-family: var(--font-family);
+        }
+        .fc { --fc-border-color: var(--border-color); --fc-page-bg-color: transparent; --fc-neutral-bg-color: var(--main-bg); }
         .fc-theme-standard .fc-scrollgrid, .fc-theme-standard td, .fc-theme-standard th { border-color: var(--border-color); }
-        .fc .fc-button-primary { background-color: var(--primary-accent); border-color: var(--primary-accent); }
+
+        /* Barra superior: título + navegación + selector de vista */
+        .fc .fc-toolbar-title { font-family: var(--font-heading); font-size: 1.3rem; font-weight: 700; color: var(--text-main); }
+        .fc .fc-toolbar.fc-header-toolbar { margin-bottom: 1.5rem; flex-wrap: wrap; gap: 0.75rem; }
+        .fc .fc-button { font-family: var(--font-family); font-weight: 600; font-size: 0.85rem; box-shadow: none !important; }
+        .fc .fc-button-primary {
+            background-color: var(--card-bg); border-color: var(--border-color); color: var(--text-main);
+            border-radius: 10px; padding: 0.4rem 0.9rem; transition: background-color 0.15s ease, color 0.15s ease;
+        }
+        .fc .fc-button-primary:hover { background-color: var(--main-bg); border-color: var(--border-color); color: var(--text-main); }
+        .fc .fc-button-primary:not(:disabled).fc-button-active,
+        .fc .fc-button-primary:not(:disabled):active {
+            background-color: var(--sidebar-active); border-color: var(--sidebar-active); color: #fff;
+        }
+        .fc .fc-button-primary:focus, .fc .fc-button-primary:not(:disabled).fc-button-active:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--sidebar-active) 25%, transparent) !important; }
+        .fc .fc-icon { font-size: 1rem; }
+
+        /* Encabezados de día (dom, lun, mar…) y números de fecha venían como
+           <a> sin ningún reset: azules y subrayados por defecto. */
+        .fc .fc-col-header-cell-cushion {
+            color: var(--text-muted); text-decoration: none !important; font-weight: 600;
+            font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.6rem 0;
+        }
+        .fc .fc-daygrid-day-number {
+            color: var(--text-main); text-decoration: none !important; font-weight: 500;
+            font-size: 0.85rem; padding: 0.4rem 0.6rem;
+        }
+        .fc .fc-daygrid-day-number:hover { color: var(--sidebar-active); }
+        .fc .fc-day-other .fc-daygrid-day-number { color: var(--text-muted); opacity: 0.5; }
+        .fc .fc-day-today { background-color: color-mix(in srgb, var(--sidebar-active) 8%, transparent) !important; }
+        .fc .fc-day-today .fc-daygrid-day-number {
+            background: var(--sidebar-active); color: #fff; border-radius: 999px;
+            width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center;
+            padding: 0; margin: 0.3rem 0.4rem 0 0;
+        }
+
+        /* Eventos (tareas) */
+        .fc .fc-event { border: none; border-radius: 6px; padding: 1px 6px; font-size: 0.78rem; font-weight: 500; }
+        .fc .fc-daygrid-event-dot { display: none; }
+        .fc .fc-more-link { color: var(--sidebar-active); font-weight: 600; font-size: 0.75rem; }
+        .fc .fc-popover { background: var(--card-bg); border-color: var(--border-color); box-shadow: var(--shadow-md); }
+        .fc .fc-popover-header { background: var(--main-bg); color: var(--text-main); }
+        .fc-theme-standard .fc-list-day-cushion { background: var(--main-bg); }
+        .fc .fc-list-event:hover td { background: var(--main-bg); }
+        .fc-timegrid-slot-label-cushion, .fc-timegrid-axis-cushion { color: var(--text-muted); font-size: 0.78rem; }
 
         @media (max-width: 992px) {
             body {
