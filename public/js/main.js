@@ -319,7 +319,7 @@ window.startGestorApp = async function startGestorApp() {
         const upList=document.getElementById('upcoming-tasks-list');
         upList.innerHTML='';
         upcoming.slice(0,4).forEach(u=>{
-            upList.innerHTML+=`<div class="custom-list-item"><div class="item-left"><div style="width:30px;height:30px;border-radius:50%;background:rgba(168,84,26,0.12);display:flex;align-items:center;justify-content:center;color:#a8541a;font-size:0.8rem;flex-shrink:0;">📅</div> <div style="display:flex; flex-direction:column; justify-content:center;"><div style="font-size:0.85rem;line-height:1.2;font-weight:600;">${escapeHtml(u.title)}</div><small style="font-size:0.7rem;color:var(--text-muted);">${escapeHtml(u.pName)}</small></div></div><div class="item-right" style="font-size:0.8rem;color:var(--text-muted);text-align:right;">${escapeHtml(u.date)}</div></div>`;
+            upList.innerHTML+=`<div class="custom-list-item"><div class="item-left"><div style="width:30px;height:30px;border-radius:50%;background:rgba(31, 111, 120,0.12);display:flex;align-items:center;justify-content:center;color:#1f6f78;font-size:0.8rem;flex-shrink:0;">📅</div> <div style="display:flex; flex-direction:column; justify-content:center;"><div style="font-size:0.85rem;line-height:1.2;font-weight:600;">${escapeHtml(u.title)}</div><small style="font-size:0.7rem;color:var(--text-muted);">${escapeHtml(u.pName)}</small></div></div><div class="item-right" style="font-size:0.8rem;color:var(--text-muted);text-align:right;">${escapeHtml(u.date)}</div></div>`;
         });
         if(upcoming.length===0)upList.innerHTML='<p class="text-muted small mt-2">No hay tareas pendientes con fecha.</p>';
 
@@ -331,23 +331,23 @@ window.startGestorApp = async function startGestorApp() {
         let gradDone=barCtx.createLinearGradient(0,0,0,400);
         gradDone.addColorStop(0,'#3f7d58');gradDone.addColorStop(1,'#2c5a3f');
         let gradPend=barCtx.createLinearGradient(0,0,0,400);
-        gradPend.addColorStop(0,'#c06a2c');gradPend.addColorStop(1,'#7a3d13');
+        gradPend.addColorStop(0,'#1f7d87');gradPend.addColorStop(1,'#144850');
         barChart=new Chart(document.getElementById('barChart'),{type:'bar',data:{labels:projNames,datasets:[{label:'Completadas',data:projDone,backgroundColor:gradDone,borderRadius:8},{label:'Pendientes',data:projPend,backgroundColor:gradPend,borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false},ticks:{color:txtColor,maxRotation:45,minRotation:45}},y:{grid:{color:gridColor},border:{display:false},ticks:{color:txtColor,stepSize:2}}},plugins:{legend:{display:true,position:'top',labels:{color:txtColor}}}}});
 
         if(pieChart)pieChart.destroy();
-        pieChart=new Chart(document.getElementById('pieChart'),{type:'doughnut',data:{labels:['Completadas','En Revisión','Por Hacer'],datasets:[{data:[tDone,tRev,tTodo],backgroundColor:['#a8541a','#3f7d58','#b4453d'],borderWidth:0,cutout:'75%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+        pieChart=new Chart(document.getElementById('pieChart'),{type:'doughnut',data:{labels:['Completadas','En Revisión','Por Hacer'],datasets:[{data:[tDone,tRev,tTodo],backgroundColor:['#1f6f78','#3f7d58','#b4453d'],borderWidth:0,cutout:'75%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
 
         if(areaChart)areaChart.destroy();
         let areaCtx=document.getElementById('areaChart').getContext('2d');
         let gradient=areaCtx.createLinearGradient(0,0,0,250);
-        gradient.addColorStop(0,'rgba(168, 84, 26,0.4)');gradient.addColorStop(1,'rgba(168, 84, 26,0.0)');
-        areaChart=new Chart(document.getElementById('areaChart'),{type:'line',data:{labels:futureLabels,datasets:[{label:'Tareas a vencer',data:futureCounts,borderColor:'#a8541a',backgroundColor:gradient,fill:true,tension:0.4,pointBackgroundColor:'#fff',pointBorderColor:'#a8541a',pointBorderWidth:2,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false},ticks:{color:txtColor}},y:{grid:{color:gridColor},border:{display:false},ticks:{color:txtColor,stepSize:1}}},plugins:{legend:{display:false}}}});
+        gradient.addColorStop(0,'rgba(31, 111, 120,0.4)');gradient.addColorStop(1,'rgba(31, 111, 120,0.0)');
+        areaChart=new Chart(document.getElementById('areaChart'),{type:'line',data:{labels:futureLabels,datasets:[{label:'Tareas a vencer',data:futureCounts,borderColor:'#1f6f78',backgroundColor:gradient,fill:true,tension:0.4,pointBackgroundColor:'#fff',pointBorderColor:'#1f6f78',pointBorderWidth:2,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false},ticks:{color:txtColor}},y:{grid:{color:gridColor},border:{display:false},ticks:{color:txtColor,stepSize:1}}},plugins:{legend:{display:false}}}});
 
         if(radarChart)radarChart.destroy();
         radarChart=new Chart(document.getElementById('radarChart'),{type:'radar',data:{labels:['Alta','Media','Baja'],datasets:[{label:'Prioridades',data:[prioAlta,prioMedia,prioBaja],backgroundColor:'rgba(63, 125, 88,0.2)',borderColor:'#3f7d58',pointBackgroundColor:'#3f7d58',pointBorderColor:'#fff',pointHoverBackgroundColor:'#fff',pointHoverBorderColor:'#3f7d58'}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{angleLines:{color:gridColor},grid:{color:gridColor},pointLabels:{color:txtColor,font:{size:13}},ticks:{display:false,stepSize:1}}},plugins:{legend:{display:false}}}});
 
         if(polarChart)polarChart.destroy();
-        polarChart=new Chart(document.getElementById('polarChart'),{type:'polarArea',data:{labels:projNames,datasets:[{data:projTotal,backgroundColor:['rgba(168, 84, 26,0.6)','rgba(63, 125, 88,0.6)','rgba(180, 69, 61,0.6)','rgba(185, 138, 46,0.6)','rgba(62, 110, 147,0.6)'],borderWidth:1,borderColor:document.body.dataset.theme==='dark'?'#1e2128':'#fff'}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{grid:{color:gridColor},ticks:{display:false}}},plugins:{legend:{position:'right',labels:{color:txtColor}}}}});
+        polarChart=new Chart(document.getElementById('polarChart'),{type:'polarArea',data:{labels:projNames,datasets:[{data:projTotal,backgroundColor:['rgba(31, 111, 120,0.6)','rgba(63, 125, 88,0.6)','rgba(180, 69, 61,0.6)','rgba(185, 138, 46,0.6)','rgba(62, 110, 147,0.6)'],borderWidth:1,borderColor:document.body.dataset.theme==='dark'?'#1e2128':'#fff'}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{grid:{color:gridColor},ticks:{display:false}}},plugins:{legend:{position:'right',labels:{color:txtColor}}}}});
 
         let inc=0,exp=0;
         state.finances.forEach(f=>{if(f.type==='income')inc+=parseFloat(f.amount);else exp+=parseFloat(f.amount);});
@@ -440,7 +440,7 @@ window.startGestorApp = async function startGestorApp() {
             let currentSeg=0;
             const animInterval=setInterval(()=>{
                 if(currentSeg<activeSegments){
-                    lines[currentSeg].setAttribute('stroke','#a8541a');
+                    lines[currentSeg].setAttribute('stroke','#1f6f78');
                     let pv=Math.round(((currentSeg+1)/totalSegments)*100);
                     if(currentSeg===activeSegments-1)pv=percentage;
                     document.getElementById('productivity-val').textContent=pv+'%';
@@ -661,7 +661,7 @@ window.startGestorApp = async function startGestorApp() {
     let calendar;
     function renderCalendar() {
         const calEl=document.getElementById('calendar-container'); let events=[];
-        const colorPalette=['#d98a3d','#3e6e93','#b98a2e','#3f7d58','#c06a2c','#b4453d','#3f8f86','#c06a2c'];
+        const colorPalette=['#38a6ae','#3e6e93','#b98a2e','#3f7d58','#1f7d87','#b4453d','#3f8f86','#1f7d87'];
         state.projects.forEach((p,idx)=>{
             const projColor=colorPalette[idx%colorPalette.length];
             p.tasks.forEach(t=>{
@@ -913,7 +913,7 @@ window.startGestorApp = async function startGestorApp() {
                 datasets: [{
                     label: 'Monto',
                     data: [inc, exp, inc - exp],
-                    backgroundColor: ['#3f7d58', '#b4453d', '#a8541a'],
+                    backgroundColor: ['#3f7d58', '#b4453d', '#1f6f78'],
                     borderRadius: 10
                 }]
             },
@@ -1018,7 +1018,7 @@ window.startGestorApp = async function startGestorApp() {
 // ---- NOTAS ----
 let currentNoteFolder = 'General';
 
-const folderPalette = ['#a8541a', '#2f6e94', '#3f7d58', '#b98a2e', '#d98a3d', '#b4453d', '#3f8f86', '#6b4a86'];
+const folderPalette = ['#1f6f78', '#2f6e94', '#3f7d58', '#b98a2e', '#38a6ae', '#b4453d', '#3f8f86', '#6b4a86'];
 
 function fallbackFolderColor(name) {
     const key = String(name || 'General').toLowerCase();
@@ -1061,7 +1061,7 @@ function renderNoteFolderTabs() {
         filtered.forEach(n=>{
             const div=document.createElement('div');
             div.className = 'note-folder-card';
-            div.style.setProperty('--note-accent', n.color || getFolderColor(n.folder) || '#a8541a');
+            div.style.setProperty('--note-accent', n.color || getFolderColor(n.folder) || '#1f6f78');
             div.innerHTML = `
                 <div class="note-folder-card-tab"></div>
                 <div class="note-folder-card-top">
@@ -1109,7 +1109,7 @@ function renderNoteFolderTabs() {
         populateFolderSelect();
         document.getElementById('note-folder-input').value=n.folder||'General';
         setNoteColorDefault(n.folder||'General');
-        document.getElementById('note-color-input').value=n.color||getFolderColor(n.folder||'General')||'#a8541a';
+        document.getElementById('note-color-input').value=n.color||getFolderColor(n.folder||'General')||'#1f6f78';
         addNoteModal.show();
     }
 
@@ -1153,7 +1153,7 @@ function renderNoteFolderTabs() {
         if(name&&name.trim()&&!state.noteFolders.includes(name.trim())){
             const normalizedName = name.trim();
             const defaultColor = getFolderColor(normalizedName);
-            const color = (prompt('Color de la carpeta en hex (#a8541a):', defaultColor) || defaultColor).trim() || defaultColor;
+            const color = (prompt('Color de la carpeta en hex (#1f6f78):', defaultColor) || defaultColor).trim() || defaultColor;
             try {
                 await api.createFolder(normalizedName, color);
                 state.noteFolders.push(normalizedName);
