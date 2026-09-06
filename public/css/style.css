@@ -572,20 +572,20 @@ body[data-auth="locked"] {
         .mini-chart-badge {
             display: flex;
             align-items: flex-end;
-            gap: 4px;
-            width: 46px;
-            height: 34px;
-            padding: 5px 7px;
-            border-radius: 10px;
-            background: var(--main-bg);
-            border: 1px solid var(--border-color);
+            gap: 8px;
+            width: 120px;
+            height: 72px;
+            padding: 12px 14px;
+            border-radius: 16px;
+            background: color-mix(in srgb, var(--sidebar-active) 10%, var(--card-bg));
+            border: 1px solid color-mix(in srgb, var(--sidebar-active) 22%, transparent);
             flex-shrink: 0;
         }
         .mini-chart-bar {
             flex: 1;
-            min-height: 3px;
-            border-radius: 2px 2px 0 0;
-            background: var(--border-color);
+            min-height: 6px;
+            border-radius: 3px 3px 0 0;
+            background: color-mix(in srgb, var(--sidebar-active) 35%, transparent);
         }
         .mini-chart-bar.accent {
             background: linear-gradient(180deg, #38a6ae, #1f6f78);
