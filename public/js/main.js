@@ -166,7 +166,7 @@ window.startGestorApp = async function startGestorApp() {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
         toast.className = 'toast-custom';
-        toast.innerHTML = `<svg width="20" height="20" fill="none" stroke="#10b981" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> <span>${escapeHtml(msg)}</span>`;
+        toast.innerHTML = `<svg width="20" height="20" fill="none" stroke="#3f7d58" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> <span>${escapeHtml(msg)}</span>`;
         container.appendChild(toast);
         setTimeout(() => { toast.classList.add('hide-toast'); setTimeout(() => toast.remove(), 300); }, 3000);
     }
@@ -269,7 +269,7 @@ window.startGestorApp = async function startGestorApp() {
     // ---- CHARTS ----
     let barChart, pieChart, areaChart, radarChart, polarChart;
     let reportsPipelineChart, reportsProfitChart;
-    Chart.defaults.font.family = "'Outfit', sans-serif";
+    Chart.defaults.font.family = "'IBM Plex Sans', sans-serif";
 
     function renderDashboard() {
         let tTotal=0, tDone=0, tPend=0, tRev=0, tTodo=0;
@@ -319,35 +319,35 @@ window.startGestorApp = async function startGestorApp() {
         const upList=document.getElementById('upcoming-tasks-list');
         upList.innerHTML='';
         upcoming.slice(0,4).forEach(u=>{
-            upList.innerHTML+=`<div class="custom-list-item"><div class="item-left"><div style="width:30px;height:30px;border-radius:50%;background:#eceafe;display:flex;align-items:center;justify-content:center;color:#6e48c1;font-size:0.8rem;flex-shrink:0;">📅</div> <div style="display:flex; flex-direction:column; justify-content:center;"><div style="font-size:0.85rem;line-height:1.2;font-weight:600;">${escapeHtml(u.title)}</div><small style="font-size:0.7rem;color:var(--text-muted);">${escapeHtml(u.pName)}</small></div></div><div class="item-right" style="font-size:0.8rem;color:var(--text-muted);text-align:right;">${escapeHtml(u.date)}</div></div>`;
+            upList.innerHTML+=`<div class="custom-list-item"><div class="item-left"><div style="width:30px;height:30px;border-radius:50%;background:rgba(168,84,26,0.12);display:flex;align-items:center;justify-content:center;color:#a8541a;font-size:0.8rem;flex-shrink:0;">📅</div> <div style="display:flex; flex-direction:column; justify-content:center;"><div style="font-size:0.85rem;line-height:1.2;font-weight:600;">${escapeHtml(u.title)}</div><small style="font-size:0.7rem;color:var(--text-muted);">${escapeHtml(u.pName)}</small></div></div><div class="item-right" style="font-size:0.8rem;color:var(--text-muted);text-align:right;">${escapeHtml(u.date)}</div></div>`;
         });
         if(upcoming.length===0)upList.innerHTML='<p class="text-muted small mt-2">No hay tareas pendientes con fecha.</p>';
 
-        const txtColor=document.body.dataset.theme==='dark'?'#fff':'#8b8e99';
-        const gridColor=document.body.dataset.theme==='dark'?'#333':'#f1f2f6';
+        const txtColor=document.body.dataset.theme==='dark'?'#edeef0':'#6b7280';
+        const gridColor=document.body.dataset.theme==='dark'?'#2e333b':'#e2e5e9';
 
         if(barChart)barChart.destroy();
         let barCtx=document.getElementById('barChart').getContext('2d');
         let gradDone=barCtx.createLinearGradient(0,0,0,400);
-        gradDone.addColorStop(0,'#10b981');gradDone.addColorStop(1,'#047857');
+        gradDone.addColorStop(0,'#3f7d58');gradDone.addColorStop(1,'#2c5a3f');
         let gradPend=barCtx.createLinearGradient(0,0,0,400);
-        gradPend.addColorStop(0,'#8b5cf6');gradPend.addColorStop(1,'#6d28d9');
+        gradPend.addColorStop(0,'#c06a2c');gradPend.addColorStop(1,'#7a3d13');
         barChart=new Chart(document.getElementById('barChart'),{type:'bar',data:{labels:projNames,datasets:[{label:'Completadas',data:projDone,backgroundColor:gradDone,borderRadius:8},{label:'Pendientes',data:projPend,backgroundColor:gradPend,borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false},ticks:{color:txtColor,maxRotation:45,minRotation:45}},y:{grid:{color:gridColor},border:{display:false},ticks:{color:txtColor,stepSize:2}}},plugins:{legend:{display:true,position:'top',labels:{color:txtColor}}}}});
 
         if(pieChart)pieChart.destroy();
-        pieChart=new Chart(document.getElementById('pieChart'),{type:'doughnut',data:{labels:['Completadas','En Revisión','Por Hacer'],datasets:[{data:[tDone,tRev,tTodo],backgroundColor:['#6e48c1','#10b981','#f43f5e'],borderWidth:0,cutout:'75%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
+        pieChart=new Chart(document.getElementById('pieChart'),{type:'doughnut',data:{labels:['Completadas','En Revisión','Por Hacer'],datasets:[{data:[tDone,tRev,tTodo],backgroundColor:['#a8541a','#3f7d58','#b4453d'],borderWidth:0,cutout:'75%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
 
         if(areaChart)areaChart.destroy();
         let areaCtx=document.getElementById('areaChart').getContext('2d');
         let gradient=areaCtx.createLinearGradient(0,0,0,250);
-        gradient.addColorStop(0,'rgba(110,72,193,0.4)');gradient.addColorStop(1,'rgba(110,72,193,0.0)');
-        areaChart=new Chart(document.getElementById('areaChart'),{type:'line',data:{labels:futureLabels,datasets:[{label:'Tareas a vencer',data:futureCounts,borderColor:'#6e48c1',backgroundColor:gradient,fill:true,tension:0.4,pointBackgroundColor:'#fff',pointBorderColor:'#6e48c1',pointBorderWidth:2,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false},ticks:{color:txtColor}},y:{grid:{color:gridColor},border:{display:false},ticks:{color:txtColor,stepSize:1}}},plugins:{legend:{display:false}}}});
+        gradient.addColorStop(0,'rgba(168, 84, 26,0.4)');gradient.addColorStop(1,'rgba(168, 84, 26,0.0)');
+        areaChart=new Chart(document.getElementById('areaChart'),{type:'line',data:{labels:futureLabels,datasets:[{label:'Tareas a vencer',data:futureCounts,borderColor:'#a8541a',backgroundColor:gradient,fill:true,tension:0.4,pointBackgroundColor:'#fff',pointBorderColor:'#a8541a',pointBorderWidth:2,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false},ticks:{color:txtColor}},y:{grid:{color:gridColor},border:{display:false},ticks:{color:txtColor,stepSize:1}}},plugins:{legend:{display:false}}}});
 
         if(radarChart)radarChart.destroy();
-        radarChart=new Chart(document.getElementById('radarChart'),{type:'radar',data:{labels:['Alta','Media','Baja'],datasets:[{label:'Prioridades',data:[prioAlta,prioMedia,prioBaja],backgroundColor:'rgba(16,185,129,0.2)',borderColor:'#10b981',pointBackgroundColor:'#10b981',pointBorderColor:'#fff',pointHoverBackgroundColor:'#fff',pointHoverBorderColor:'#10b981'}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{angleLines:{color:gridColor},grid:{color:gridColor},pointLabels:{color:txtColor,font:{size:13}},ticks:{display:false,stepSize:1}}},plugins:{legend:{display:false}}}});
+        radarChart=new Chart(document.getElementById('radarChart'),{type:'radar',data:{labels:['Alta','Media','Baja'],datasets:[{label:'Prioridades',data:[prioAlta,prioMedia,prioBaja],backgroundColor:'rgba(63, 125, 88,0.2)',borderColor:'#3f7d58',pointBackgroundColor:'#3f7d58',pointBorderColor:'#fff',pointHoverBackgroundColor:'#fff',pointHoverBorderColor:'#3f7d58'}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{angleLines:{color:gridColor},grid:{color:gridColor},pointLabels:{color:txtColor,font:{size:13}},ticks:{display:false,stepSize:1}}},plugins:{legend:{display:false}}}});
 
         if(polarChart)polarChart.destroy();
-        polarChart=new Chart(document.getElementById('polarChart'),{type:'polarArea',data:{labels:projNames,datasets:[{data:projTotal,backgroundColor:['rgba(110,72,193,0.6)','rgba(16,185,129,0.6)','rgba(244,63,94,0.6)','rgba(245,158,11,0.6)','rgba(59,130,246,0.6)'],borderWidth:1,borderColor:document.body.dataset.theme==='dark'?'#252528':'#fff'}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{grid:{color:gridColor},ticks:{display:false}}},plugins:{legend:{position:'right',labels:{color:txtColor}}}}});
+        polarChart=new Chart(document.getElementById('polarChart'),{type:'polarArea',data:{labels:projNames,datasets:[{data:projTotal,backgroundColor:['rgba(168, 84, 26,0.6)','rgba(63, 125, 88,0.6)','rgba(180, 69, 61,0.6)','rgba(185, 138, 46,0.6)','rgba(62, 110, 147,0.6)'],borderWidth:1,borderColor:document.body.dataset.theme==='dark'?'#1e2128':'#fff'}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{grid:{color:gridColor},ticks:{display:false}}},plugins:{legend:{position:'right',labels:{color:txtColor}}}}});
 
         let inc=0,exp=0;
         state.finances.forEach(f=>{if(f.type==='income')inc+=parseFloat(f.amount);else exp+=parseFloat(f.amount);});
@@ -392,7 +392,7 @@ window.startGestorApp = async function startGestorApp() {
         } else {
             window.globalTimerActive=true;
             document.getElementById('global-timer-btn').innerHTML='<svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
-            document.getElementById('global-timer-btn').style.background='#f43f5e';
+            document.getElementById('global-timer-btn').style.background='#b4453d';
             if(!state.globalTimeSpent)state.globalTimeSpent=0;
             window.globalTimerInterval=setInterval(()=>{
                 state.globalTimeSpent++;
@@ -407,7 +407,7 @@ window.startGestorApp = async function startGestorApp() {
         document.getElementById('global-timer-display').textContent=formatTime(state.globalTimeSpent);
         if(window.globalTimerActive){
             document.getElementById('global-timer-btn').innerHTML='<svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
-            document.getElementById('global-timer-btn').style.background='#f43f5e';
+            document.getElementById('global-timer-btn').style.background='#b4453d';
         } else {
             document.getElementById('global-timer-btn').innerHTML='<svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
             document.getElementById('global-timer-btn').style.background='var(--sidebar-active)';
@@ -423,7 +423,7 @@ window.startGestorApp = async function startGestorApp() {
         svg.innerHTML='';
         const totalSegments=16;
         const activeSegments=Math.round((percentage/100)*totalSegments);
-        const inactiveColor=document.body.dataset.theme==='dark'?'#2a2a2e':'#e2e8f0';
+        const inactiveColor=document.body.dataset.theme==='dark'?'#2e333b':'#e2e5e9';
         let lines=[];
         for(let i=0;i<totalSegments;i++){
             const line=document.createElementNS('http://www.w3.org/2000/svg','line');
@@ -440,7 +440,7 @@ window.startGestorApp = async function startGestorApp() {
             let currentSeg=0;
             const animInterval=setInterval(()=>{
                 if(currentSeg<activeSegments){
-                    lines[currentSeg].setAttribute('stroke','#6e48c1');
+                    lines[currentSeg].setAttribute('stroke','#a8541a');
                     let pv=Math.round(((currentSeg+1)/totalSegments)*100);
                     if(currentSeg===activeSegments-1)pv=percentage;
                     document.getElementById('productivity-val').textContent=pv+'%';
@@ -477,10 +477,10 @@ window.startGestorApp = async function startGestorApp() {
                 datesHtml+=`<div style="display:flex;justify-content:space-between;margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted);background:var(--main-bg);padding:0.3rem 0.5rem;border-radius:6px;"><span><span style="color:var(--text-main);font-weight:500;">Inicio:</span> ${escapeHtml(startDate||'--')}</span><span><span style="color:var(--text-main);font-weight:500;">Fin:</span> ${escapeHtml(endDate||'--')}</span></div>`;
             }
             if(wStart||wEnd){
-                datesHtml+=`<div style="display:flex;justify-content:space-between;margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted);background:rgba(16,185,129,0.1);padding:0.3rem 0.5rem;border-radius:6px;"><span><span style="color:#10b981;font-weight:500;">Garantía Inc:</span> ${escapeHtml(wStart||'--')}</span><span><span style="color:#10b981;font-weight:500;">Garantía Fin:</span> ${escapeHtml(wEnd||'--')}</span></div>`;
+                datesHtml+=`<div style="display:flex;justify-content:space-between;margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted);background:rgba(63, 125, 88,0.1);padding:0.3rem 0.5rem;border-radius:6px;"><span><span style="color:#3f7d58;font-weight:500;">Garantía Inc:</span> ${escapeHtml(wStart||'--')}</span><span><span style="color:#3f7d58;font-weight:500;">Garantía Fin:</span> ${escapeHtml(wEnd||'--')}</span></div>`;
             }
             const el=document.createElement('div'); el.className='col';
-            el.innerHTML=`<div class="project-card" onclick="openProject('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div style="width:42px;height:42px;border-radius:12px;background:var(--main-bg);color:var(--sidebar-active);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg></div><div style="display:flex;align-items:center;gap:8px;"><span class="metric-badge" style="background:var(--main-bg);color:var(--text-muted);font-size:0.75rem;">${progress}%</span><button class="btn-action-icon btn-action-delete" style="padding:4px;" onclick="deleteProject('${p.id}',event)" title="Eliminar Proyecto">🗑️</button></div></div><h5 style="color:var(--text-main);font-weight:600;margin-bottom:0.2rem;">${escapeHtml(p.name)}</h5><p class="text-muted small m-0">${p.tasks.length} Tareas</p>${datesHtml}<div style="width:100%;background-color:var(--border-color);height:6px;border-radius:4px;margin-top:1rem;overflow:hidden;"><div style="width:${progress}%;background-color:${progress===100?'#10b981':'var(--sidebar-active)'};height:100%;transition:width 0.3s ease;"></div></div></div>`;
+            el.innerHTML=`<div class="project-card" onclick="openProject('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div style="width:42px;height:42px;border-radius:12px;background:var(--main-bg);color:var(--sidebar-active);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg></div><div style="display:flex;align-items:center;gap:8px;"><span class="metric-badge" style="background:var(--main-bg);color:var(--text-muted);font-size:0.75rem;">${progress}%</span><button class="btn-action-icon btn-action-delete" style="padding:4px;" onclick="deleteProject('${p.id}',event)" title="Eliminar Proyecto">🗑️</button></div></div><h5 style="color:var(--text-main);font-weight:600;margin-bottom:0.2rem;">${escapeHtml(p.name)}</h5><p class="text-muted small m-0">${p.tasks.length} Tareas</p>${datesHtml}<div style="width:100%;background-color:var(--border-color);height:6px;border-radius:4px;margin-top:1rem;overflow:hidden;"><div style="width:${progress}%;background-color:${progress===100?'#3f7d58':'var(--sidebar-active)'};height:100%;transition:width 0.3s ease;"></div></div></div>`;
             list.appendChild(el);
         });
     }
@@ -661,7 +661,7 @@ window.startGestorApp = async function startGestorApp() {
     let calendar;
     function renderCalendar() {
         const calEl=document.getElementById('calendar-container'); let events=[];
-        const colorPalette=['#ec4899','#3b82f6','#f59e0b','#10b981','#8b5cf6','#ef4444','#06b6d4','#f97316'];
+        const colorPalette=['#d98a3d','#3e6e93','#b98a2e','#3f7d58','#c06a2c','#b4453d','#3f8f86','#c06a2c'];
         state.projects.forEach((p,idx)=>{
             const projColor=colorPalette[idx%colorPalette.length];
             p.tasks.forEach(t=>{
@@ -688,7 +688,7 @@ window.startGestorApp = async function startGestorApp() {
             const wEnd=p.warranty_end||p.warrantyEnd||'--';
             const hasWarranty=(p.warranty_start||p.warrantyStart||p.warranty_end||p.warrantyEnd);
             const el=document.createElement('div'); el.className='col';
-            el.innerHTML=`<div class="project-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;"><h5 style="color:var(--text-main);font-weight:600;margin:0;">${escapeHtml(p.name)}</h5><button class="btn btn-sm btn-outline-primary" style="border-radius:20px;font-size:0.75rem;border-color:var(--sidebar-active);color:var(--sidebar-active);" onclick="openEditWarranty('${p.id}')">Asignar</button></div><div style="display:flex;justify-content:space-between;margin-top:1rem;font-size:0.85rem;color:var(--text-muted);background:${hasWarranty?'rgba(16,185,129,0.1)':'var(--main-bg)'};padding:0.8rem;border-radius:8px;"><div style="display:flex;flex-direction:column;"><span style="font-weight:600;color:${hasWarranty?'#10b981':'var(--text-main)'};">Inicio</span><span>${escapeHtml(wStart)}</span></div><div style="display:flex;flex-direction:column;"><span style="font-weight:600;color:${hasWarranty?'#10b981':'var(--text-main)'};">Fin</span><span>${escapeHtml(wEnd)}</span></div></div></div>`;
+            el.innerHTML=`<div class="project-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;"><h5 style="color:var(--text-main);font-weight:600;margin:0;">${escapeHtml(p.name)}</h5><button class="btn btn-sm btn-outline-primary" style="border-radius:20px;font-size:0.75rem;border-color:var(--sidebar-active);color:var(--sidebar-active);" onclick="openEditWarranty('${p.id}')">Asignar</button></div><div style="display:flex;justify-content:space-between;margin-top:1rem;font-size:0.85rem;color:var(--text-muted);background:${hasWarranty?'rgba(63, 125, 88,0.1)':'var(--main-bg)'};padding:0.8rem;border-radius:8px;"><div style="display:flex;flex-direction:column;"><span style="font-weight:600;color:${hasWarranty?'#3f7d58':'var(--text-main)'};">Inicio</span><span>${escapeHtml(wStart)}</span></div><div style="display:flex;flex-direction:column;"><span style="font-weight:600;color:${hasWarranty?'#3f7d58':'var(--text-main)'};">Fin</span><span>${escapeHtml(wEnd)}</span></div></div></div>`;
             list.appendChild(el);
         });
     };
@@ -736,7 +736,7 @@ window.startGestorApp = async function startGestorApp() {
         state.finances.forEach(f=>{
             if(f.type==='income')inc+=parseFloat(f.amount);else exp+=parseFloat(f.amount);
             const tr=document.createElement('tr');
-            tr.innerHTML=`<td>${escapeHtml(f.concept)}</td><td><span class="metric-badge" style="background:${f.type==='income'?'rgba(16,185,129,0.1)':'rgba(244,63,94,0.1)'};color:${f.type==='income'?'#10b981':'#f43f5e'}">${f.type==='income'?'Ingreso':'Gasto'}</span></td><td style="color:${f.type==='income'?'#10b981':'#f43f5e'};font-weight:600;">${f.type==='income'?'+':'-'}$${parseFloat(f.amount).toFixed(2)}</td><td>${escapeHtml(f.date)}</td><td><button class="btn-action-icon btn-action-delete" onclick="deleteFinance('${f.id}')">🗑️</button></td>`;
+            tr.innerHTML=`<td>${escapeHtml(f.concept)}</td><td><span class="metric-badge" style="background:${f.type==='income'?'rgba(63, 125, 88,0.1)':'rgba(180, 69, 61,0.1)'};color:${f.type==='income'?'#3f7d58':'#b4453d'}">${f.type==='income'?'Ingreso':'Gasto'}</span></td><td style="color:${f.type==='income'?'#3f7d58':'#b4453d'};font-weight:600;">${f.type==='income'?'+':'-'}$${parseFloat(f.amount).toFixed(2)}</td><td>${escapeHtml(f.date)}</td><td><button class="btn-action-icon btn-action-delete" onclick="deleteFinance('${f.id}')">🗑️</button></td>`;
             tbody.appendChild(tr);
         });
         const incomeEl = document.getElementById('fin-income') || document.getElementById('fin-inc');
@@ -779,17 +779,87 @@ window.startGestorApp = async function startGestorApp() {
     };
 
     // ---- PIPELINE ----
+    const PIPELINE_STAGES = ['lead', 'negotiation', 'execution', 'delivered'];
+
+    function projectPipelineValue(project) {
+        return state.finances
+            .filter((f) => f.type === 'income' && f.project_id != null && String(f.project_id) === String(project.id))
+            .reduce((sum, f) => sum + (parseFloat(f.amount) || 0), 0);
+    }
+
+    function formatMoney(amount) {
+        return `$${amount.toLocaleString('es-ES', { maximumFractionDigits: 0 })}`;
+    }
+
     function renderPipeline() {
-        const stages=['lead','negotiation','execution','delivered'];
-        stages.forEach(s=>{
-            const col=document.getElementById(`pipeline-${s}`); if(!col)return; col.innerHTML='';
-            state.projects.filter(p=>p.status===s).forEach(p=>{
-                const d=document.createElement('div'); d.className='task-card mb-2';
-                d.innerHTML=`<div class="task-title">${escapeHtml(p.name)}</div><div class="task-footer"><div class="task-meta"><small style="color:var(--text-muted);">${p.tasks.length} tareas</small></div></div>`;
-                col.appendChild(d);
+        PIPELINE_STAGES.forEach((stage) => {
+            const col = document.getElementById(`pipe-${stage}`);
+            if (!col) return;
+            col.innerHTML = '';
+            const projectsInStage = state.projects.filter((p) => p.status === stage);
+            let stageValue = 0;
+
+            projectsInStage.forEach((p) => {
+                const value = projectPipelineValue(p);
+                stageValue += value;
+                const card = document.createElement('div');
+                card.className = 'task-card pipeline-card mb-2';
+                card.dataset.id = p.id;
+                card.innerHTML = `
+                    <div class="task-title">${escapeHtml(p.name)}</div>
+                    <div class="task-footer">
+                        <div class="task-meta"><small style="color:var(--text-muted);">${p.tasks.length} tareas</small></div>
+                        ${value > 0 ? `<span class="pipeline-value">${formatMoney(value)}</span>` : ''}
+                    </div>`;
+                col.appendChild(card);
             });
+
+            if (!projectsInStage.length) {
+                col.innerHTML = '<p class="text-muted small text-center mt-3 mb-0" style="padding: 0 0.5rem;">Sin proyectos aquí</p>';
+            }
+
+            const totalEl = document.getElementById(`pipe-total-${stage}`);
+            if (totalEl) {
+                totalEl.textContent = stageValue > 0 ? formatMoney(stageValue) : String(projectsInStage.length);
+            }
         });
     }
+
+    // Drag & Drop entre etapas del pipeline: antes esta vista solo mostraba
+    // proyectos (y con un bug de IDs, ni eso); ahora arrastrar una tarjeta
+    // actualiza de verdad el status del proyecto en la base de datos.
+    PIPELINE_STAGES.forEach((stage) => {
+        const el = document.getElementById(`pipe-${stage}`);
+        if (!el) return;
+        new Sortable(el, {
+            group: 'pipeline',
+            animation: 150,
+            onEnd: async (evt) => {
+                const projectId = evt.item.dataset.id;
+                const newStatus = evt.to.id.replace('pipe-', '');
+                const project = state.projects.find((p) => String(p.id) === String(projectId));
+                if (!project || project.status === newStatus) return;
+                const previousStatus = project.status;
+                project.status = newStatus;
+                try {
+                    await api.updateProject(projectId, {
+                        name: project.name,
+                        status: newStatus,
+                        start_date: project.start_date || project.startDate || '',
+                        end_date: project.end_date || project.endDate || '',
+                        warranty_start: project.warranty_start || project.warrantyStart || '',
+                        warranty_end: project.warranty_end || project.warrantyEnd || '',
+                    });
+                    if (window.logActivity) window.logActivity('Proyecto movido en el Pipeline', project.name);
+                    if (navLinks.dashboard.classList.contains('active')) renderDashboard();
+                } catch (e) {
+                    console.error('Error moviendo proyecto en el pipeline:', e);
+                    project.status = previousStatus; // revertir si falló el guardado
+                }
+                renderPipeline();
+            },
+        });
+    });
 
     // ---- REPORTES ----
     function renderReports() {
@@ -808,8 +878,8 @@ window.startGestorApp = async function startGestorApp() {
         const reportProfitCanvas = document.getElementById('reportsProfitChart');
         if (!reportPipelineCanvas || !reportProfitCanvas) return;
 
-        const txtColor=document.body.dataset.theme==='dark'?'#fff':'#8b8e99';
-        const gridColor=document.body.dataset.theme==='dark'?'#333':'#f1f2f6';
+        const txtColor=document.body.dataset.theme==='dark'?'#edeef0':'#6b7280';
+        const gridColor=document.body.dataset.theme==='dark'?'#2e333b':'#e2e5e9';
 
         if (reportsPipelineChart) reportsPipelineChart.destroy();
         reportsPipelineChart = new Chart(reportPipelineCanvas, {
@@ -818,7 +888,7 @@ window.startGestorApp = async function startGestorApp() {
                 labels: ['Prospecto', 'Negociación', 'Ejecución', 'Entregado'],
                 datasets: [{
                     data: [lead, negotiation, execution, delivered],
-                    backgroundColor: ['#2dd4bf', '#60a5fa', '#f59e0b', '#10b981'],
+                    backgroundColor: ['#3f8f86', '#5a8fb8', '#b98a2e', '#3f7d58'],
                     borderWidth: 0,
                     cutout: '72%'
                 }]
@@ -843,7 +913,7 @@ window.startGestorApp = async function startGestorApp() {
                 datasets: [{
                     label: 'Monto',
                     data: [inc, exp, inc - exp],
-                    backgroundColor: ['#10b981', '#f43f5e', '#6e48c1'],
+                    backgroundColor: ['#3f7d58', '#b4453d', '#a8541a'],
                     borderRadius: 10
                 }]
             },
@@ -911,8 +981,8 @@ window.startGestorApp = async function startGestorApp() {
                 const project = state.projects.find((p) => String(p.id) === String(f.project_id));
                 tr.innerHTML = `
                     <td>${escapeHtml(f.concept)}</td>
-                    <td><span class="metric-badge" style="background:${f.type === 'income' ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)'};color:${f.type === 'income' ? '#10b981' : '#f43f5e'}">${f.type === 'income' ? 'Ingreso' : 'Gasto'}</span></td>
-                    <td style="font-weight:600;color:${f.type === 'income' ? '#10b981' : '#f43f5e'}">${f.type === 'income' ? '+' : '-'}$${parseFloat(f.amount).toFixed(2)}</td>
+                    <td><span class="metric-badge" style="background:${f.type === 'income' ? 'rgba(63, 125, 88,0.1)' : 'rgba(180, 69, 61,0.1)'};color:${f.type === 'income' ? '#3f7d58' : '#b4453d'}">${f.type === 'income' ? 'Ingreso' : 'Gasto'}</span></td>
+                    <td style="font-weight:600;color:${f.type === 'income' ? '#3f7d58' : '#b4453d'}">${f.type === 'income' ? '+' : '-'}$${parseFloat(f.amount).toFixed(2)}</td>
                     <td>${escapeHtml(f.date)}</td>
                     <td>${escapeHtml(project ? project.name : '--')}</td>`;
                 tbody.appendChild(tr);
@@ -948,7 +1018,7 @@ window.startGestorApp = async function startGestorApp() {
 // ---- NOTAS ----
 let currentNoteFolder = 'General';
 
-const folderPalette = ['#6e48c1', '#0f9bd7', '#10b981', '#f97316', '#ec4899', '#ef4444', '#14b8a6', '#8b5cf6'];
+const folderPalette = ['#a8541a', '#2f6e94', '#3f7d58', '#b98a2e', '#d98a3d', '#b4453d', '#3f8f86', '#6b4a86'];
 
 function fallbackFolderColor(name) {
     const key = String(name || 'General').toLowerCase();
@@ -991,7 +1061,7 @@ function renderNoteFolderTabs() {
         filtered.forEach(n=>{
             const div=document.createElement('div');
             div.className = 'note-folder-card';
-            div.style.setProperty('--note-accent', n.color || getFolderColor(n.folder) || '#6e48c1');
+            div.style.setProperty('--note-accent', n.color || getFolderColor(n.folder) || '#a8541a');
             div.innerHTML = `
                 <div class="note-folder-card-tab"></div>
                 <div class="note-folder-card-top">
@@ -1039,7 +1109,7 @@ function renderNoteFolderTabs() {
         populateFolderSelect();
         document.getElementById('note-folder-input').value=n.folder||'General';
         setNoteColorDefault(n.folder||'General');
-        document.getElementById('note-color-input').value=n.color||getFolderColor(n.folder||'General')||'#6e48c1';
+        document.getElementById('note-color-input').value=n.color||getFolderColor(n.folder||'General')||'#a8541a';
         addNoteModal.show();
     }
 
@@ -1083,7 +1153,7 @@ function renderNoteFolderTabs() {
         if(name&&name.trim()&&!state.noteFolders.includes(name.trim())){
             const normalizedName = name.trim();
             const defaultColor = getFolderColor(normalizedName);
-            const color = (prompt('Color de la carpeta en hex (#6e48c1):', defaultColor) || defaultColor).trim() || defaultColor;
+            const color = (prompt('Color de la carpeta en hex (#a8541a):', defaultColor) || defaultColor).trim() || defaultColor;
             try {
                 await api.createFolder(normalizedName, color);
                 state.noteFolders.push(normalizedName);
