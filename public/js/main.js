@@ -128,25 +128,6 @@ function renderActivityFeed() {
     }
 }
 
-let currentDbTab = 'projects';
-
-function updateDbTabButtons() {
-    const tabs = ['projects', 'finances', 'activities'];
-    tabs.forEach((tab) => {
-        const btn = document.getElementById(`db-tab-${tab}`);
-        if (!btn) return;
-        btn.classList.toggle('active', tab === currentDbTab);
-    });
-}
-
-window.switchDbTab = function switchDbTab(tab) {
-    currentDbTab = tab || 'projects';
-    updateDbTabButtons();
-    if (typeof window.renderDatabase === 'function') {
-        window.renderDatabase();
-    }
-};
-
 // ========================================================
 // INICIALIZACIÓN (DOMContentLoaded)
 // ========================================================
@@ -182,14 +163,11 @@ window.startGestorApp = async function startGestorApp() {
     const views = {
         dashboard: document.getElementById('dashboard-view'),
         projects:  document.getElementById('projects-view'),
-        warranty:  document.getElementById('warranty-view'),
         board:     document.getElementById('board-view'),
         calendar:  document.getElementById('calendar-view'),
         finances:  document.getElementById('finances-view'),
         activity:  document.getElementById('activity-view'),
         pipeline:  document.getElementById('pipeline-view'),
-        reports:   document.getElementById('reports-view'),
-        database:  document.getElementById('database-view'),
         notes:     document.getElementById('notes-view'),
         businessMail: document.getElementById('business-mail-view'),
         integrations: document.getElementById('integrations-view')
@@ -197,14 +175,11 @@ window.startGestorApp = async function startGestorApp() {
     const navLinks = {
         dashboard: document.getElementById('nav-dashboard'),
         projects:  document.getElementById('nav-projects'),
-        warranty:  document.getElementById('nav-warranty'),
         board:     document.getElementById('nav-tasks'),
         calendar:  document.getElementById('nav-calendar'),
         finances:  document.getElementById('nav-finances'),
         activity:  document.getElementById('nav-activity'),
         pipeline:  document.getElementById('nav-pipeline'),
-        reports:   document.getElementById('nav-reports'),
-        database:  document.getElementById('nav-database'),
         notes:     document.getElementById('nav-notes'),
         businessMail: document.getElementById('nav-business-mail'),
         integrations: document.getElementById('nav-integrations')
@@ -268,7 +243,6 @@ window.startGestorApp = async function startGestorApp() {
 
     // ---- CHARTS ----
     let barChart, pieChart, areaChart, radarChart, polarChart;
-    let reportsPipelineChart, reportsProfitChart;
     Chart.defaults.font.family = "'IBM Plex Sans', sans-serif";
 
     function renderDashboard() {
@@ -466,28 +440,31 @@ window.startGestorApp = async function startGestorApp() {
         state.projects.forEach(p=>{
             let d=0; p.tasks.forEach(t=>{ if(t.status==='done')d++; });
             let progress=p.tasks.length>0?Math.round((d/p.tasks.length)*100):0;
-            if(currentProjFilter==='active'&&progress===100&&p.tasks.length>0)return;
-            if(currentProjFilter==='done'&&(progress<100||p.tasks.length===0))return;
-            let datesHtml='';
             const startDate = p.start_date || p.startDate || '';
             const endDate   = p.end_date   || p.endDate   || '';
             const wStart    = p.warranty_start || p.warrantyStart || '';
             const wEnd      = p.warranty_end   || p.warrantyEnd   || '';
+            if(currentProjFilter==='active'&&progress===100&&p.tasks.length>0)return;
+            if(currentProjFilter==='done'&&(progress<100||p.tasks.length===0))return;
+            if(currentProjFilter==='warranty'&&!(wStart||wEnd))return;
+            let datesHtml='';
             if(startDate||endDate){
                 datesHtml+=`<div style="display:flex;justify-content:space-between;margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted);background:var(--main-bg);padding:0.3rem 0.5rem;border-radius:6px;"><span><span style="color:var(--text-main);font-weight:500;">Inicio:</span> ${escapeHtml(startDate||'--')}</span><span><span style="color:var(--text-main);font-weight:500;">Fin:</span> ${escapeHtml(endDate||'--')}</span></div>`;
             }
             if(wStart||wEnd){
                 datesHtml+=`<div style="display:flex;justify-content:space-between;margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted);background:rgba(63, 125, 88,0.1);padding:0.3rem 0.5rem;border-radius:6px;"><span><span style="color:#3f7d58;font-weight:500;">Garantía Inc:</span> ${escapeHtml(wStart||'--')}</span><span><span style="color:#3f7d58;font-weight:500;">Garantía Fin:</span> ${escapeHtml(wEnd||'--')}</span></div>`;
             }
+            const hasWarranty = !!(wStart || wEnd);
             const el=document.createElement('div'); el.className='col';
-            el.innerHTML=`<div class="project-card" onclick="openProject('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div style="width:42px;height:42px;border-radius:12px;background:var(--main-bg);color:var(--sidebar-active);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg></div><div style="display:flex;align-items:center;gap:8px;"><span class="metric-badge" style="background:var(--main-bg);color:var(--text-muted);font-size:0.75rem;">${progress}%</span><button class="btn-action-icon btn-action-delete" style="padding:4px;" onclick="deleteProject('${p.id}',event)" title="Eliminar Proyecto">🗑️</button></div></div><h5 style="color:var(--text-main);font-weight:600;margin-bottom:0.2rem;">${escapeHtml(p.name)}</h5><p class="text-muted small m-0">${p.tasks.length} Tareas</p>${datesHtml}<div style="width:100%;background-color:var(--border-color);height:6px;border-radius:4px;margin-top:1rem;overflow:hidden;"><div style="width:${progress}%;background-color:${progress===100?'#3f7d58':'var(--sidebar-active)'};height:100%;transition:width 0.3s ease;"></div></div></div>`;
+            el.innerHTML=`<div class="project-card" onclick="openProject('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div style="width:42px;height:42px;border-radius:12px;background:var(--main-bg);color:var(--sidebar-active);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg></div><div style="display:flex;align-items:center;gap:8px;"><span class="metric-badge" style="background:var(--main-bg);color:var(--text-muted);font-size:0.75rem;">${progress}%</span><button class="btn-action-icon" style="padding:4px;${hasWarranty ? 'color:#3f7d58;' : ''}" onclick="openEditWarranty('${p.id}',event)" title="${hasWarranty ? 'Garantía asignada' : 'Asignar garantía'}"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg></button><button class="btn-action-icon btn-action-delete" style="padding:4px;" onclick="deleteProject('${p.id}',event)" title="Eliminar Proyecto">🗑️</button></div></div><h5 style="color:var(--text-main);font-weight:600;margin-bottom:0.2rem;">${escapeHtml(p.name)}</h5><p class="text-muted small m-0">${p.tasks.length} Tareas</p>${datesHtml}<div style="width:100%;background-color:var(--border-color);height:6px;border-radius:4px;margin-top:1rem;overflow:hidden;"><div style="width:${progress}%;background-color:${progress===100?'#3f7d58':'var(--sidebar-active)'};height:100%;transition:width 0.3s ease;"></div></div></div>`;
             list.appendChild(el);
         });
     }
 
     window.openProject = function(id) {
         state.currentProjectId = id;
-        showView('board','Tareas','Gestión de Kanban');
+        const p = state.projects.find(x=>x.id===id);
+        showView('board', p ? `Tareas: ${p.name}` : 'Tareas', 'Gestión de Kanban');
         renderBoard();
     };
 
@@ -532,8 +509,32 @@ window.startGestorApp = async function startGestorApp() {
     });
 
     // ---- TABLERO KANBAN ----
+    // "Mis Tareas" (global, todos los proyectos) y el tablero de un proyecto
+    // puntual comparten las mismas columnas del DOM; boardMode dice cuál de
+    // los dos está activo, para saber qué renderizar y a dónde volver tras
+    // arrastrar/editar/eliminar una tarea.
+    let boardMode = 'global';
+
+    function findTaskAndProject(taskId) {
+        for (const proj of state.projects) {
+            const t = proj.tasks.find(x => x.id === taskId);
+            if (t) return { project: proj, task: t };
+        }
+        return { project: null, task: null };
+    }
+
+    function setTaskCreationVisible(visible) {
+        const fab = document.getElementById('fab-add-task');
+        if (fab) fab.style.display = visible ? 'flex' : 'none';
+        document.querySelectorAll('.add-task-inline').forEach((btn) => {
+            btn.style.display = visible ? '' : 'none';
+        });
+    }
+
     function renderBoard() {
         const p=state.projects.find(x=>x.id===state.currentProjectId); if(!p)return;
+        boardMode = 'project';
+        setTaskCreationVisible(true);
         document.getElementById('view-project-tasks').textContent=`Tareas: ${p.name}`;
         ['todo','inprogress','done','paused'].forEach(s=>{
             document.getElementById(`${s}-list`).innerHTML='';
@@ -550,37 +551,75 @@ window.startGestorApp = async function startGestorApp() {
         Object.keys(counts).forEach(k=>document.getElementById(`count-${k}`).textContent=counts[k]);
     }
 
-    // Drag & Drop Kanban
+    // "Mis Tareas": agrega las tareas de TODOS los proyectos en un solo
+    // tablero, cada tarjeta rotulada con su proyecto. Antes el ítem de menú
+    // "Tareas" en realidad solo mostraba el último proyecto abierto, sin
+    // decir cuál — esto es lo que de verdad pide un "todas mis tareas".
+    function renderGlobalBoard() {
+        boardMode = 'global';
+        setTaskCreationVisible(false);
+        const subNav = document.getElementById('view-project-tasks');
+        if (subNav) subNav.textContent = 'Mis Tareas';
+        ['todo','inprogress','done','paused'].forEach(s=>{
+            document.getElementById(`${s}-list`).innerHTML='';
+            document.getElementById(`count-${s}`).textContent='0';
+        });
+        let counts={todo:0,inprogress:0,done:0,paused:0};
+        state.projects.forEach(p=>{
+            p.tasks.forEach(t=>{
+                counts[t.status]++;
+                const card=document.createElement('div'); card.className='task-card'; card.dataset.id=t.id;
+                const dateHtml=t.dueDate?`<div style="margin-bottom:4px;">📅 ${escapeHtml(t.dueDate)}</div>`:'';
+                card.innerHTML=`<div class="task-title">${escapeHtml(t.title)}</div><div class="task-project-tag">${escapeHtml(p.name)}</div><div class="task-footer"><div class="task-meta">${dateHtml}<span class="priority-badge priority-${escapeHtml(t.priority)}">${escapeHtml(t.priority)}</span></div><div class="d-flex"><button class="btn-action-icon btn-action-delete" onclick="deleteTaskDirectly('${t.id}',event)" title="Eliminar">🗑️</button><button class="btn-action-icon" onclick="editTask('${t.id}',event)" title="Editar">✏️</button></div></div>`;
+                document.getElementById(`${t.status}-list`).appendChild(card);
+            });
+        });
+        Object.keys(counts).forEach(k=>document.getElementById(`count-${k}`).textContent=counts[k]);
+    }
+
+    function refreshBoardView() {
+        if (boardMode === 'global') renderGlobalBoard(); else renderBoard();
+    }
+
+    // Drag & Drop Kanban (funciona igual en modo proyecto y en "Mis Tareas")
     ['todo','inprogress','done','paused'].forEach(s=>{
         new Sortable(document.getElementById(`${s}-list`),{
             group:'kanban', animation:150,
             onEnd: async (evt)=>{
                 const tId=evt.item.dataset.id;
                 const nStat=evt.to.id.replace('-list','');
-                const p=state.projects.find(x=>x.id===state.currentProjectId);
-                const t=p&&p.tasks.find(x=>x.id===tId);
+                const { task: t } = findTaskAndProject(tId);
                 if(t&&t.status!==nStat){
                     t.status=nStat;
                     try {
                         await api.updateTask(tId, { ...t, due_date: t.dueDate });
-                        renderBoard();
+                        refreshBoardView();
                     } catch(e){ console.error('Error actualizando tarea:', e); }
                 }
             }
         });
     });
 
-    // FAB — Nueva Tarea
-    document.getElementById('fab-add-task').addEventListener('click', ()=>{
+    function openNewTaskModal(status) {
         document.getElementById('task-id-input').value='';
         document.getElementById('task-title-input').value='';
         document.getElementById('task-description-input').value='';
         document.getElementById('task-priority-input').value='Media';
         document.getElementById('task-due-date-input').value='';
-        document.getElementById('task-status-input').value='todo';
+        document.getElementById('task-status-input').value=status||'todo';
         const modal=new bootstrap.Modal(document.getElementById('taskDetailModal'));
         modal.show();
-    });
+    }
+
+    // FAB — Nueva Tarea
+    document.getElementById('fab-add-task').addEventListener('click', ()=>openNewTaskModal('todo'));
+
+    // Botones "+ Nueva tarea" de cada columna del Kanban (llamado desde el
+    // HTML). Antes no existía esta función: el botón tiraba un error y no
+    // hacía nada.
+    window.openQuickTask = function(status) {
+        openNewTaskModal(status);
+    };
 
     // Guardar tarea (crear o actualizar)
     document.getElementById('save-task-details-btn').addEventListener('click', async ()=>{
@@ -593,23 +632,23 @@ window.startGestorApp = async function startGestorApp() {
             status:document.getElementById('task-status-input').value||'todo'
         };
         if(!taskData.title)return;
-        const p=state.projects.find(x=>x.id===state.currentProjectId);
-        if(!p)return;
         try {
             if(id){
-                // Actualizar
+                // Actualizar (busca en todos los proyectos: puede venir de "Mis Tareas")
+                const { task: t } = findTaskAndProject(id);
                 await api.updateTask(id, taskData);
-                const t=p.tasks.find(x=>x.id===id);
                 if(t){ Object.assign(t, taskData); }
                 if(window.logActivity)window.logActivity('Tarea Actualizada', taskData.title);
             } else {
-                // Crear
+                // Crear: solo posible dentro del tablero de un proyecto puntual
+                const p=state.projects.find(x=>x.id===state.currentProjectId);
+                if(!p)return;
                 const newTask=await api.createTask(p.id, taskData);
                 p.tasks.push(newTask);
                 if(window.logActivity)window.logActivity('Tarea Creada', taskData.title);
             }
             bootstrap.Modal.getInstance(document.getElementById('taskDetailModal')).hide();
-            renderBoard();
+            refreshBoardView();
             if(navLinks.dashboard.classList.contains('active'))renderDashboard();
         } catch(e){ alert('Error al guardar tarea: '+e.message); }
     });
@@ -619,20 +658,19 @@ window.startGestorApp = async function startGestorApp() {
         const id=document.getElementById('task-id-input').value;
         if(!id)return;
         if(confirm('¿Eliminar esta tarea?')){
-            const p=state.projects.find(x=>x.id===state.currentProjectId);
+            const { project: p } = findTaskAndProject(id);
             try {
                 await api.deleteTask(id);
                 if(p) p.tasks=p.tasks.filter(t=>t.id!==id);
                 bootstrap.Modal.getInstance(document.getElementById('taskDetailModal')).hide();
-                renderBoard();
+                refreshBoardView();
             } catch(e){ alert('Error al eliminar tarea: '+e.message); }
         }
     });
 
     window.editTask = function(id, event) {
         if(event)event.stopPropagation();
-        const p=state.projects.find(x=>x.id===state.currentProjectId);
-        const t=p&&p.tasks.find(x=>x.id===id);
+        const { task: t } = findTaskAndProject(id);
         if(!t)return;
         document.getElementById('task-id-input').value=t.id;
         document.getElementById('task-title-input').value=t.title;
@@ -647,11 +685,11 @@ window.startGestorApp = async function startGestorApp() {
     window.deleteTaskDirectly = async function(id, event) {
         if(event)event.stopPropagation();
         if(confirm('¿Eliminar esta tarea?')){
-            const p=state.projects.find(x=>x.id===state.currentProjectId);
+            const { project: p } = findTaskAndProject(id);
             try {
                 await api.deleteTask(id);
                 if(p)p.tasks=p.tasks.filter(t=>t.id!==id);
-                renderBoard();
+                refreshBoardView();
                 if(navLinks.dashboard.classList.contains('active'))renderDashboard();
             } catch(e){ alert('Error al eliminar tarea: '+e.message); }
         }
@@ -681,20 +719,12 @@ window.startGestorApp = async function startGestorApp() {
     }
 
     // ---- GARANTÍAS ----
-    window.renderWarrantyList = function() {
-        const list=document.getElementById('warranty-list'); list.innerHTML='';
-        state.projects.forEach(p=>{
-            const wStart=p.warranty_start||p.warrantyStart||'--';
-            const wEnd=p.warranty_end||p.warrantyEnd||'--';
-            const hasWarranty=(p.warranty_start||p.warrantyStart||p.warranty_end||p.warrantyEnd);
-            const el=document.createElement('div'); el.className='col';
-            el.innerHTML=`<div class="project-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;"><h5 style="color:var(--text-main);font-weight:600;margin:0;">${escapeHtml(p.name)}</h5><button class="btn btn-sm btn-outline-primary" style="border-radius:20px;font-size:0.75rem;border-color:var(--sidebar-active);color:var(--sidebar-active);" onclick="openEditWarranty('${p.id}')">Asignar</button></div><div style="display:flex;justify-content:space-between;margin-top:1rem;font-size:0.85rem;color:var(--text-muted);background:${hasWarranty?'rgba(63, 125, 88,0.1)':'var(--main-bg)'};padding:0.8rem;border-radius:8px;"><div style="display:flex;flex-direction:column;"><span style="font-weight:600;color:${hasWarranty?'#3f7d58':'var(--text-main)'};">Inicio</span><span>${escapeHtml(wStart)}</span></div><div style="display:flex;flex-direction:column;"><span style="font-weight:600;color:${hasWarranty?'#3f7d58':'var(--text-main)'};">Fin</span><span>${escapeHtml(wEnd)}</span></div></div></div>`;
-            list.appendChild(el);
-        });
-    };
-
+    // Antes era una vista propia en el menú (una tarjeta por proyecto solo
+    // para ver/editar 2 fechas). Ahora se asigna desde el ícono de escudo en
+    // la propia tarjeta de Proyectos, y se filtra ahí con "En Garantía".
     const editWarrantyModal=new bootstrap.Modal(document.getElementById('editWarrantyModal'));
-    window.openEditWarranty=function(id){
+    window.openEditWarranty=function(id,event){
+        if(event)event.stopPropagation();
         const p=state.projects.find(x=>x.id===id);
         if(p){
             document.getElementById('warranty-project-id').value=id;
@@ -720,7 +750,7 @@ window.startGestorApp = async function startGestorApp() {
                 p.warranty_end=warranty_end;   p.warrantyEnd=warranty_end;
                 if(window.logActivity)window.logActivity('Garantía Actualizada', p.name);
                 editWarrantyModal.hide();
-                window.renderWarrantyList();
+                renderProjectsList();
             } catch(e){ alert('Error actualizando garantía: '+e.message); }
         }
     });
@@ -861,159 +891,6 @@ window.startGestorApp = async function startGestorApp() {
         });
     });
 
-    // ---- REPORTES ----
-    function renderReports() {
-        let lead=0, negotiation=0, execution=0, delivered=0;
-        state.projects.forEach((p) => {
-            if (p.status === 'lead') lead++;
-            else if (p.status === 'negotiation') negotiation++;
-            else if (p.status === 'execution') execution++;
-            else if (p.status === 'delivered') delivered++;
-        });
-
-        let inc=0,exp=0;
-        state.finances.forEach(f=>{if(f.type==='income')inc+=parseFloat(f.amount);else exp+=parseFloat(f.amount);});
-
-        const reportPipelineCanvas = document.getElementById('reportsPipelineChart');
-        const reportProfitCanvas = document.getElementById('reportsProfitChart');
-        if (!reportPipelineCanvas || !reportProfitCanvas) return;
-
-        const txtColor=document.body.dataset.theme==='dark'?'#edeef0':'#6b7280';
-        const gridColor=document.body.dataset.theme==='dark'?'#2e333b':'#e2e5e9';
-
-        if (reportsPipelineChart) reportsPipelineChart.destroy();
-        reportsPipelineChart = new Chart(reportPipelineCanvas, {
-            type: 'doughnut',
-            data: {
-                labels: ['Prospecto', 'Negociación', 'Ejecución', 'Entregado'],
-                datasets: [{
-                    data: [lead, negotiation, execution, delivered],
-                    backgroundColor: ['#3f8f86', '#5a8fb8', '#b98a2e', '#3f7d58'],
-                    borderWidth: 0,
-                    cutout: '72%'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: { color: txtColor }
-                    }
-                }
-            }
-        });
-
-        if (reportsProfitChart) reportsProfitChart.destroy();
-        reportsProfitChart = new Chart(reportProfitCanvas, {
-            type: 'bar',
-            data: {
-                labels: ['Ingresos', 'Gastos', 'Balance'],
-                datasets: [{
-                    label: 'Monto',
-                    data: [inc, exp, inc - exp],
-                    backgroundColor: ['#3f7d58', '#b4453d', '#1f6f78'],
-                    borderRadius: 10
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { grid: { display: false }, ticks: { color: txtColor } },
-                    y: { grid: { color: gridColor }, ticks: { color: txtColor } }
-                },
-                plugins: {
-                    legend: { display: false }
-                }
-            }
-        });
-    }
-
-    // ---- BASE DE DATOS (vista tabla) ----
-    function renderDatabase() {
-        const thead = document.getElementById('db-thead');
-        const tbody = document.getElementById('db-tbody');
-        if (!thead || !tbody) return;
-
-        tbody.innerHTML = '';
-        updateDbTabButtons();
-
-        if (currentDbTab === 'projects') {
-            thead.innerHTML = `
-                <tr>
-                    <th>Proyecto</th>
-                    <th>Tarea</th>
-                    <th>Estado</th>
-                    <th>Prioridad</th>
-                    <th>Vence</th>
-                </tr>`;
-            state.projects.forEach(p => {
-                p.tasks.forEach(t => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${escapeHtml(p.name)}</td>
-                        <td>${escapeHtml(t.title)}</td>
-                        <td><span class="metric-badge">${escapeHtml(t.status)}</span></td>
-                        <td><span class="priority-badge priority-${escapeHtml(t.priority)}">${escapeHtml(t.priority)}</span></td>
-                        <td>${escapeHtml(t.dueDate || '--')}</td>`;
-                    tbody.appendChild(tr);
-                });
-            });
-            if (!tbody.children.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-muted">No hay proyectos o tareas para mostrar.</td></tr>';
-            }
-            return;
-        }
-
-        if (currentDbTab === 'finances') {
-            thead.innerHTML = `
-                <tr>
-                    <th>Concepto</th>
-                    <th>Tipo</th>
-                    <th>Monto</th>
-                    <th>Fecha</th>
-                    <th>Proyecto</th>
-                </tr>`;
-            state.finances.forEach(f => {
-                const tr = document.createElement('tr');
-                const project = state.projects.find((p) => String(p.id) === String(f.project_id));
-                tr.innerHTML = `
-                    <td>${escapeHtml(f.concept)}</td>
-                    <td><span class="metric-badge" style="background:${f.type === 'income' ? 'rgba(63, 125, 88,0.1)' : 'rgba(180, 69, 61,0.1)'};color:${f.type === 'income' ? '#3f7d58' : '#b4453d'}">${f.type === 'income' ? 'Ingreso' : 'Gasto'}</span></td>
-                    <td style="font-weight:600;color:${f.type === 'income' ? '#3f7d58' : '#b4453d'}">${f.type === 'income' ? '+' : '-'}$${parseFloat(f.amount).toFixed(2)}</td>
-                    <td>${escapeHtml(f.date)}</td>
-                    <td>${escapeHtml(project ? project.name : '--')}</td>`;
-                tbody.appendChild(tr);
-            });
-            if (!tbody.children.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-muted">No hay movimientos registrados.</td></tr>';
-            }
-            return;
-        }
-
-        if (currentDbTab === 'activities') {
-            thead.innerHTML = `
-                <tr>
-                    <th>Título</th>
-                    <th>Descripción</th>
-                    <th>Fecha</th>
-                </tr>`;
-            state.activities.forEach(a => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${escapeHtml(a.title)}</td>
-                    <td>${escapeHtml(a.desc || '')}</td>
-                    <td>${escapeHtml(a.date || '--')}</td>`;
-                tbody.appendChild(tr);
-            });
-            if (!tbody.children.length) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-muted">No hay actividad para mostrar.</td></tr>';
-            }
-        }
-    }
-    window.renderDatabase = renderDatabase;
 
 // ---- NOTAS ----
 let currentNoteFolder = 'General';
@@ -1568,14 +1445,11 @@ function renderNoteFolderTabs() {
     // ---- NAVEGACIÓN ----
     navLinks.dashboard.addEventListener('click',()=>{ showView('dashboard','Performance Overview','Resumen de datos'); renderDashboard(); });
     navLinks.projects.addEventListener('click',()=>{ showView('projects','Proyectos','Tus carpetas de trabajo'); renderProjectsList(); });
-    navLinks.warranty.addEventListener('click',()=>{ showView('warranty','Garantías','Gestión de garantías de los proyectos'); window.renderWarrantyList(); });
-    navLinks.board.addEventListener('click',()=>{ showView('board','Tareas','Gestión de Kanban'); renderBoard(); });
+    navLinks.board.addEventListener('click',()=>{ showView('board','Mis Tareas','Todas tus tareas, de todos tus proyectos'); renderGlobalBoard(); });
     navLinks.calendar.addEventListener('click',()=>{ showView('calendar','Calendario','Vista de tareas por fecha'); renderCalendar(); });
     navLinks.finances.addEventListener('click',()=>{ showView('finances','Finanzas','Control de ingresos y gastos'); renderFinances(); });
     navLinks.activity.addEventListener('click',()=>{ showView('activity','Actividad','Registro de actividades recientes'); renderActivityFeed(); });
     navLinks.pipeline.addEventListener('click',()=>{ showView('pipeline','Pipeline','Flujo de proyectos'); renderPipeline(); });
-    navLinks.reports.addEventListener('click',()=>{ showView('reports','Reportes','Resumen ejecutivo'); renderReports(); });
-    navLinks.database.addEventListener('click',()=>{ showView('database','Base de Datos','Vista de todas las tareas'); renderDatabase(); });
     navLinks.notes.addEventListener('click',()=>{ showView('notes','Notas','Tus notas y apuntes'); renderNoteFolderTabs(); renderNotesList(); });
     navLinks.businessMail.addEventListener('click',()=>{ showView('businessMail','Correo Negocio','Solo mensajes filtrados por n8n y Gmail'); renderBusinessMail(); });
     navLinks.integrations.addEventListener('click',()=>{ showView('integrations','Integraciones','Conecta el CRM con otras herramientas'); renderIntegrations(); });

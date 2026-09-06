@@ -394,6 +394,11 @@ body[data-auth="locked"] {
         .task-card { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.2rem; cursor: grab; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
         .task-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
         .task-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.5rem; }
+        .task-project-tag {
+            display: inline-block; font-size: 0.7rem; font-weight: 600;
+            color: var(--sidebar-active); background: var(--main-bg);
+            border-radius: 999px; padding: 2px 8px; margin-bottom: 0.6rem;
+        }
         .task-footer { display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-muted); border-top: 1px dashed var(--border-color); padding-top: 0.8rem; margin-top: 0.5rem; }
         .priority-badge { padding: 4px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; }
         .priority-Alta { background-color: var(--red-badge); color: var(--red-text); }
