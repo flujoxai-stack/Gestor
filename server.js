@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const crypto = require('crypto');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 const {
     selectRows,
@@ -74,7 +75,15 @@ async function requireAuth(req, res, next) {
 
 app.use('/api', requireAuth);
 
-app.post('/api/auth/login', async (req, res) => {
+const loginRateLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    limit: 10, // 10 intentos por IP en la ventana
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Demasiados intentos de inicio de sesión. Intenta de nuevo en unos minutos.' },
+});
+
+app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
     try {
         const email = String(req.body?.email || '').trim().toLowerCase();
         const password = String(req.body?.password || '');
@@ -853,11 +862,13 @@ app.put('/api/business-notifications/:id', async (req, res) => {
 
 app.post('/webhooks/n8n/business-email', async (req, res) => {
     try {
-        if (N8N_WEBHOOK_SECRET) {
-            const secretHeader = String(req.headers['x-gestor-webhook-secret'] || '').trim();
-            if (!secretHeader || secretHeader !== N8N_WEBHOOK_SECRET) {
-                return res.status(401).json({ error: 'Invalid webhook secret' });
-            }
+        if (!N8N_WEBHOOK_SECRET) {
+            console.error('N8N_WEBHOOK_SECRET no está configurado: rechazando webhook entrante por seguridad.');
+            return res.status(503).json({ error: 'Webhook no configurado' });
+        }
+        const secretHeader = String(req.headers['x-gestor-webhook-secret'] || '').trim();
+        if (!secretHeader || secretHeader !== N8N_WEBHOOK_SECRET) {
+            return res.status(401).json({ error: 'Invalid webhook secret' });
         }
 
         const payload = req.body || {};

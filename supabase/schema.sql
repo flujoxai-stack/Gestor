@@ -111,7 +111,13 @@ insert into public.note_folders (name)
 values ('General'), ('APIs'), ('Contraseñas')
 on conflict (name) do nothing;
 
-grant usage on schema public to anon, authenticated;
+-- Seguridad (SEC-02): el backend (server.js) habla con Supabase usando la
+-- SUPABASE_SERVICE_ROLE_KEY, que ignora RLS por diseño. El navegador nunca
+-- debe tener una vía directa a estas tablas, así que NO se le concede nada
+-- al rol "anon" y se activa RLS en todas las tablas. Ver también
+-- supabase/migrations/001_enable_rls.sql si estás aplicando esto sobre un
+-- proyecto que ya tenía las tablas creadas con los permisos antiguos.
+grant usage on schema public to authenticated;
 grant select, insert, update, delete on
     public.projects,
     public.tasks,
@@ -123,4 +129,26 @@ grant select, insert, update, delete on
     public.integrations,
     public.integration_events,
     public.business_notifications
-to anon, authenticated;
+to authenticated;
+
+alter table public.projects enable row level security;
+alter table public.tasks enable row level security;
+alter table public.finances enable row level security;
+alter table public.activities enable row level security;
+alter table public.notes enable row level security;
+alter table public.note_folders enable row level security;
+alter table public.settings enable row level security;
+alter table public.integrations enable row level security;
+alter table public.integration_events enable row level security;
+alter table public.business_notifications enable row level security;
+
+create policy "authenticated_full_access" on public.projects for all to authenticated using (true) with check (true);
+create policy "authenticated_full_access" on public.tasks for all to authenticated using (true) with check (true);
+create policy "authenticated_full_access" on public.finances for all to authenticated using (true) with check (true);
+create policy "authenticated_full_access" on public.activities for all to authenticated using (true) with check (true);
+create policy "authenticated_full_access" on public.notes for all to authenticated using (true) with check (true);
+create policy "authenticated_full_access" on public.note_folders for all to authenticated using (true) with check (true);
+create policy "authenticated_full_access" on public.settings for all to authenticated using (true) with check (true);
+create policy "authenticated_full_access" on public.integrations for all to authenticated using (true) with check (true);
+create policy "authenticated_full_access" on public.integration_events for all to authenticated using (true) with check (true);
+create policy "authenticated_full_access" on public.business_notifications for all to authenticated using (true) with check (true);

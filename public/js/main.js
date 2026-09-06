@@ -77,6 +77,23 @@ function saveState() {
 }
 
 // ========================================================
+// SEGURIDAD: escape de HTML
+// ========================================================
+// Todo dato que venga del servidor (nombres de proyecto, títulos de tarea,
+// notas, correos de negocio…) es contenido potencialmente hostil: puede
+// haber sido escrito por un tercero (p. ej. el asunto de un correo real
+// reenviado por n8n). Nunca se inserta crudo en innerHTML.
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+    }[ch]));
+}
+
+// ========================================================
 // ACTIVIDADES (FEED)
 // ========================================================
 window.logActivity = async function(title, desc) {
@@ -99,8 +116,8 @@ function renderActivityFeed() {
             <div class="item-left">
                 <div style="width:32px;height:32px;border-radius:50%;background:var(--main-bg);display:flex;align-items:center;justify-content:center;color:var(--sidebar-active);font-size:1rem;flex-shrink:0;">📋</div>
                 <div style="display:flex;flex-direction:column;justify-content:center;">
-                    <div style="font-size:0.85rem;font-weight:600;">${a.title}</div>
-                    <small style="font-size:0.7rem;color:var(--text-muted);">${a.desc || ''}</small>
+                    <div style="font-size:0.85rem;font-weight:600;">${escapeHtml(a.title)}</div>
+                    <small style="font-size:0.7rem;color:var(--text-muted);">${escapeHtml(a.desc || '')}</small>
                 </div>
             </div>
             <div class="item-right" style="font-size:0.75rem;color:var(--text-muted);text-align:right;">${dateStr}</div>`;
@@ -149,7 +166,7 @@ window.startGestorApp = async function startGestorApp() {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
         toast.className = 'toast-custom';
-        toast.innerHTML = `<svg width="20" height="20" fill="none" stroke="#10b981" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> <span>${msg}</span>`;
+        toast.innerHTML = `<svg width="20" height="20" fill="none" stroke="#10b981" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> <span>${escapeHtml(msg)}</span>`;
         container.appendChild(toast);
         setTimeout(() => { toast.classList.add('hide-toast'); setTimeout(() => toast.remove(), 300); }, 3000);
     }
@@ -302,7 +319,7 @@ window.startGestorApp = async function startGestorApp() {
         const upList=document.getElementById('upcoming-tasks-list');
         upList.innerHTML='';
         upcoming.slice(0,4).forEach(u=>{
-            upList.innerHTML+=`<div class="custom-list-item"><div class="item-left"><div style="width:30px;height:30px;border-radius:50%;background:#eceafe;display:flex;align-items:center;justify-content:center;color:#6e48c1;font-size:0.8rem;flex-shrink:0;">📅</div> <div style="display:flex; flex-direction:column; justify-content:center;"><div style="font-size:0.85rem;line-height:1.2;font-weight:600;">${u.title}</div><small style="font-size:0.7rem;color:var(--text-muted);">${u.pName}</small></div></div><div class="item-right" style="font-size:0.8rem;color:var(--text-muted);text-align:right;">${u.date}</div></div>`;
+            upList.innerHTML+=`<div class="custom-list-item"><div class="item-left"><div style="width:30px;height:30px;border-radius:50%;background:#eceafe;display:flex;align-items:center;justify-content:center;color:#6e48c1;font-size:0.8rem;flex-shrink:0;">📅</div> <div style="display:flex; flex-direction:column; justify-content:center;"><div style="font-size:0.85rem;line-height:1.2;font-weight:600;">${escapeHtml(u.title)}</div><small style="font-size:0.7rem;color:var(--text-muted);">${escapeHtml(u.pName)}</small></div></div><div class="item-right" style="font-size:0.8rem;color:var(--text-muted);text-align:right;">${escapeHtml(u.date)}</div></div>`;
         });
         if(upcoming.length===0)upList.innerHTML='<p class="text-muted small mt-2">No hay tareas pendientes con fecha.</p>';
 
@@ -457,13 +474,13 @@ window.startGestorApp = async function startGestorApp() {
             const wStart    = p.warranty_start || p.warrantyStart || '';
             const wEnd      = p.warranty_end   || p.warrantyEnd   || '';
             if(startDate||endDate){
-                datesHtml+=`<div style="display:flex;justify-content:space-between;margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted);background:var(--main-bg);padding:0.3rem 0.5rem;border-radius:6px;"><span><span style="color:var(--text-main);font-weight:500;">Inicio:</span> ${startDate||'--'}</span><span><span style="color:var(--text-main);font-weight:500;">Fin:</span> ${endDate||'--'}</span></div>`;
+                datesHtml+=`<div style="display:flex;justify-content:space-between;margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted);background:var(--main-bg);padding:0.3rem 0.5rem;border-radius:6px;"><span><span style="color:var(--text-main);font-weight:500;">Inicio:</span> ${escapeHtml(startDate||'--')}</span><span><span style="color:var(--text-main);font-weight:500;">Fin:</span> ${escapeHtml(endDate||'--')}</span></div>`;
             }
             if(wStart||wEnd){
-                datesHtml+=`<div style="display:flex;justify-content:space-between;margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted);background:rgba(16,185,129,0.1);padding:0.3rem 0.5rem;border-radius:6px;"><span><span style="color:#10b981;font-weight:500;">Garantía Inc:</span> ${wStart||'--'}</span><span><span style="color:#10b981;font-weight:500;">Garantía Fin:</span> ${wEnd||'--'}</span></div>`;
+                datesHtml+=`<div style="display:flex;justify-content:space-between;margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted);background:rgba(16,185,129,0.1);padding:0.3rem 0.5rem;border-radius:6px;"><span><span style="color:#10b981;font-weight:500;">Garantía Inc:</span> ${escapeHtml(wStart||'--')}</span><span><span style="color:#10b981;font-weight:500;">Garantía Fin:</span> ${escapeHtml(wEnd||'--')}</span></div>`;
             }
             const el=document.createElement('div'); el.className='col';
-            el.innerHTML=`<div class="project-card" onclick="openProject('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div style="width:42px;height:42px;border-radius:12px;background:var(--main-bg);color:var(--sidebar-active);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg></div><div style="display:flex;align-items:center;gap:8px;"><span class="metric-badge" style="background:var(--main-bg);color:var(--text-muted);font-size:0.75rem;">${progress}%</span><button class="btn-action-icon btn-action-delete" style="padding:4px;" onclick="deleteProject('${p.id}',event)" title="Eliminar Proyecto">🗑️</button></div></div><h5 style="color:var(--text-main);font-weight:600;margin-bottom:0.2rem;">${p.name}</h5><p class="text-muted small m-0">${p.tasks.length} Tareas</p>${datesHtml}<div style="width:100%;background-color:var(--border-color);height:6px;border-radius:4px;margin-top:1rem;overflow:hidden;"><div style="width:${progress}%;background-color:${progress===100?'#10b981':'var(--sidebar-active)'};height:100%;transition:width 0.3s ease;"></div></div></div>`;
+            el.innerHTML=`<div class="project-card" onclick="openProject('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div style="width:42px;height:42px;border-radius:12px;background:var(--main-bg);color:var(--sidebar-active);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg></div><div style="display:flex;align-items:center;gap:8px;"><span class="metric-badge" style="background:var(--main-bg);color:var(--text-muted);font-size:0.75rem;">${progress}%</span><button class="btn-action-icon btn-action-delete" style="padding:4px;" onclick="deleteProject('${p.id}',event)" title="Eliminar Proyecto">🗑️</button></div></div><h5 style="color:var(--text-main);font-weight:600;margin-bottom:0.2rem;">${escapeHtml(p.name)}</h5><p class="text-muted small m-0">${p.tasks.length} Tareas</p>${datesHtml}<div style="width:100%;background-color:var(--border-color);height:6px;border-radius:4px;margin-top:1rem;overflow:hidden;"><div style="width:${progress}%;background-color:${progress===100?'#10b981':'var(--sidebar-active)'};height:100%;transition:width 0.3s ease;"></div></div></div>`;
             list.appendChild(el);
         });
     }
@@ -526,8 +543,8 @@ window.startGestorApp = async function startGestorApp() {
         p.tasks.forEach(t=>{
             counts[t.status]++;
             const card=document.createElement('div'); card.className='task-card'; card.dataset.id=t.id;
-            const dateHtml=t.dueDate?`<div style="margin-bottom:4px;">📅 ${t.dueDate}</div>`:'';
-            card.innerHTML=`<div class="task-title">${t.title}</div><div class="task-footer"><div class="task-meta">${dateHtml}<span class="priority-badge priority-${t.priority}">${t.priority}</span></div><div class="d-flex"><button class="btn-action-icon btn-action-delete" onclick="deleteTaskDirectly('${t.id}',event)" title="Eliminar">🗑️</button><button class="btn-action-icon" onclick="editTask('${t.id}',event)" title="Editar">✏️</button></div></div>`;
+            const dateHtml=t.dueDate?`<div style="margin-bottom:4px;">📅 ${escapeHtml(t.dueDate)}</div>`:'';
+            card.innerHTML=`<div class="task-title">${escapeHtml(t.title)}</div><div class="task-footer"><div class="task-meta">${dateHtml}<span class="priority-badge priority-${escapeHtml(t.priority)}">${escapeHtml(t.priority)}</span></div><div class="d-flex"><button class="btn-action-icon btn-action-delete" onclick="deleteTaskDirectly('${t.id}',event)" title="Eliminar">🗑️</button><button class="btn-action-icon" onclick="editTask('${t.id}',event)" title="Editar">✏️</button></div></div>`;
             document.getElementById(`${t.status}-list`).appendChild(card);
         });
         Object.keys(counts).forEach(k=>document.getElementById(`count-${k}`).textContent=counts[k]);
@@ -671,7 +688,7 @@ window.startGestorApp = async function startGestorApp() {
             const wEnd=p.warranty_end||p.warrantyEnd||'--';
             const hasWarranty=(p.warranty_start||p.warrantyStart||p.warranty_end||p.warrantyEnd);
             const el=document.createElement('div'); el.className='col';
-            el.innerHTML=`<div class="project-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;"><h5 style="color:var(--text-main);font-weight:600;margin:0;">${p.name}</h5><button class="btn btn-sm btn-outline-primary" style="border-radius:20px;font-size:0.75rem;border-color:var(--sidebar-active);color:var(--sidebar-active);" onclick="openEditWarranty('${p.id}')">Asignar</button></div><div style="display:flex;justify-content:space-between;margin-top:1rem;font-size:0.85rem;color:var(--text-muted);background:${hasWarranty?'rgba(16,185,129,0.1)':'var(--main-bg)'};padding:0.8rem;border-radius:8px;"><div style="display:flex;flex-direction:column;"><span style="font-weight:600;color:${hasWarranty?'#10b981':'var(--text-main)'};">Inicio</span><span>${wStart}</span></div><div style="display:flex;flex-direction:column;"><span style="font-weight:600;color:${hasWarranty?'#10b981':'var(--text-main)'};">Fin</span><span>${wEnd}</span></div></div></div>`;
+            el.innerHTML=`<div class="project-card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;"><h5 style="color:var(--text-main);font-weight:600;margin:0;">${escapeHtml(p.name)}</h5><button class="btn btn-sm btn-outline-primary" style="border-radius:20px;font-size:0.75rem;border-color:var(--sidebar-active);color:var(--sidebar-active);" onclick="openEditWarranty('${p.id}')">Asignar</button></div><div style="display:flex;justify-content:space-between;margin-top:1rem;font-size:0.85rem;color:var(--text-muted);background:${hasWarranty?'rgba(16,185,129,0.1)':'var(--main-bg)'};padding:0.8rem;border-radius:8px;"><div style="display:flex;flex-direction:column;"><span style="font-weight:600;color:${hasWarranty?'#10b981':'var(--text-main)'};">Inicio</span><span>${escapeHtml(wStart)}</span></div><div style="display:flex;flex-direction:column;"><span style="font-weight:600;color:${hasWarranty?'#10b981':'var(--text-main)'};">Fin</span><span>${escapeHtml(wEnd)}</span></div></div></div>`;
             list.appendChild(el);
         });
     };
@@ -719,7 +736,7 @@ window.startGestorApp = async function startGestorApp() {
         state.finances.forEach(f=>{
             if(f.type==='income')inc+=parseFloat(f.amount);else exp+=parseFloat(f.amount);
             const tr=document.createElement('tr');
-            tr.innerHTML=`<td>${f.concept}</td><td><span class="metric-badge" style="background:${f.type==='income'?'rgba(16,185,129,0.1)':'rgba(244,63,94,0.1)'};color:${f.type==='income'?'#10b981':'#f43f5e'}">${f.type==='income'?'Ingreso':'Gasto'}</span></td><td style="color:${f.type==='income'?'#10b981':'#f43f5e'};font-weight:600;">${f.type==='income'?'+':'-'}$${parseFloat(f.amount).toFixed(2)}</td><td>${f.date}</td><td><button class="btn-action-icon btn-action-delete" onclick="deleteFinance('${f.id}')">🗑️</button></td>`;
+            tr.innerHTML=`<td>${escapeHtml(f.concept)}</td><td><span class="metric-badge" style="background:${f.type==='income'?'rgba(16,185,129,0.1)':'rgba(244,63,94,0.1)'};color:${f.type==='income'?'#10b981':'#f43f5e'}">${f.type==='income'?'Ingreso':'Gasto'}</span></td><td style="color:${f.type==='income'?'#10b981':'#f43f5e'};font-weight:600;">${f.type==='income'?'+':'-'}$${parseFloat(f.amount).toFixed(2)}</td><td>${escapeHtml(f.date)}</td><td><button class="btn-action-icon btn-action-delete" onclick="deleteFinance('${f.id}')">🗑️</button></td>`;
             tbody.appendChild(tr);
         });
         const incomeEl = document.getElementById('fin-income') || document.getElementById('fin-inc');
@@ -768,7 +785,7 @@ window.startGestorApp = async function startGestorApp() {
             const col=document.getElementById(`pipeline-${s}`); if(!col)return; col.innerHTML='';
             state.projects.filter(p=>p.status===s).forEach(p=>{
                 const d=document.createElement('div'); d.className='task-card mb-2';
-                d.innerHTML=`<div class="task-title">${p.name}</div><div class="task-footer"><div class="task-meta"><small style="color:var(--text-muted);">${p.tasks.length} tareas</small></div></div>`;
+                d.innerHTML=`<div class="task-title">${escapeHtml(p.name)}</div><div class="task-footer"><div class="task-meta"><small style="color:var(--text-muted);">${p.tasks.length} tareas</small></div></div>`;
                 col.appendChild(d);
             });
         });
@@ -866,11 +883,11 @@ window.startGestorApp = async function startGestorApp() {
                 p.tasks.forEach(t => {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
-                        <td>${p.name}</td>
-                        <td>${t.title}</td>
-                        <td><span class="metric-badge">${t.status}</span></td>
-                        <td><span class="priority-badge priority-${t.priority}">${t.priority}</span></td>
-                        <td>${t.dueDate || '--'}</td>`;
+                        <td>${escapeHtml(p.name)}</td>
+                        <td>${escapeHtml(t.title)}</td>
+                        <td><span class="metric-badge">${escapeHtml(t.status)}</span></td>
+                        <td><span class="priority-badge priority-${escapeHtml(t.priority)}">${escapeHtml(t.priority)}</span></td>
+                        <td>${escapeHtml(t.dueDate || '--')}</td>`;
                     tbody.appendChild(tr);
                 });
             });
@@ -893,11 +910,11 @@ window.startGestorApp = async function startGestorApp() {
                 const tr = document.createElement('tr');
                 const project = state.projects.find((p) => String(p.id) === String(f.project_id));
                 tr.innerHTML = `
-                    <td>${f.concept}</td>
+                    <td>${escapeHtml(f.concept)}</td>
                     <td><span class="metric-badge" style="background:${f.type === 'income' ? 'rgba(16,185,129,0.1)' : 'rgba(244,63,94,0.1)'};color:${f.type === 'income' ? '#10b981' : '#f43f5e'}">${f.type === 'income' ? 'Ingreso' : 'Gasto'}</span></td>
                     <td style="font-weight:600;color:${f.type === 'income' ? '#10b981' : '#f43f5e'}">${f.type === 'income' ? '+' : '-'}$${parseFloat(f.amount).toFixed(2)}</td>
-                    <td>${f.date}</td>
-                    <td>${project ? project.name : '--'}</td>`;
+                    <td>${escapeHtml(f.date)}</td>
+                    <td>${escapeHtml(project ? project.name : '--')}</td>`;
                 tbody.appendChild(tr);
             });
             if (!tbody.children.length) {
@@ -916,9 +933,9 @@ window.startGestorApp = async function startGestorApp() {
             state.activities.forEach(a => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${a.title}</td>
-                    <td>${a.desc || ''}</td>
-                    <td>${a.date || '--'}</td>`;
+                    <td>${escapeHtml(a.title)}</td>
+                    <td>${escapeHtml(a.desc || '')}</td>
+                    <td>${escapeHtml(a.date || '--')}</td>`;
                 tbody.appendChild(tr);
             });
             if (!tbody.children.length) {
@@ -987,8 +1004,8 @@ function renderNoteFolderTabs() {
                     <button class="btn-action-icon btn-action-delete" onclick="deleteNote('${n.id}',event)">🗑️</button>
                 </div>
                 <div class="note-folder-card-body">
-                    <strong class="note-folder-card-title">${n.title}</strong>
-                    <span class="note-folder-card-folder">${n.folder || 'General'}</span>
+                    <strong class="note-folder-card-title">${escapeHtml(n.title)}</strong>
+                    <span class="note-folder-card-folder">${escapeHtml(n.folder || 'General')}</span>
                 </div>
                 <div class="note-folder-card-footer">Abrir nota</div>`;
             div.onclick=()=>openEditNote(n);
@@ -1158,20 +1175,20 @@ function renderNoteFolderTabs() {
                 state.integrations.forEach((integration) => {
                     const col = document.createElement('div');
                     col.className = 'col';
-                    const eventsLabel = (integration.events || []).map((event) => event === 'all' ? 'Todos' : event).join(', ');
+                    const eventsLabel = (integration.events || []).map((event) => event === 'all' ? 'Todos' : escapeHtml(event)).join(', ');
                     col.innerHTML = `
                         <div class="dash-card h-100 p-3">
                             <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
                                 <div>
                                     <div class="d-flex align-items-center gap-2 mb-1">
-                                        <strong>${integration.name || 'Integración sin nombre'}</strong>
+                                        <strong>${escapeHtml(integration.name || 'Integración sin nombre')}</strong>
                                         <span class="badge rounded-pill ${integration.enabled ? 'bg-success' : 'bg-secondary'}">${integration.enabled ? 'Activa' : 'Pausada'}</span>
                                     </div>
-                                    <small class="text-muted text-uppercase">${integration.type || 'webhook'}</small>
+                                    <small class="text-muted text-uppercase">${escapeHtml(integration.type || 'webhook')}</small>
                                 </div>
                                 <button class="btn btn-sm btn-outline-danger" data-action="delete">Eliminar</button>
                             </div>
-                            <div class="small text-muted mb-2" style="word-break: break-word;">${integration.endpoint || 'Sin endpoint configurado'}</div>
+                            <div class="small text-muted mb-2" style="word-break: break-word;">${escapeHtml(integration.endpoint || 'Sin endpoint configurado')}</div>
                             <div class="small mb-3"><strong>Eventos:</strong> ${eventsLabel || 'Todos'}</div>
                             <div class="d-flex gap-2 flex-wrap">
                                 <button class="btn btn-sm btn-outline-primary" data-action="edit">Editar</button>
@@ -1219,10 +1236,10 @@ function renderNoteFolderTabs() {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td>${entry.created_at ? new Date(entry.created_at).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '--'}</td>
-                        <td>${integration ? integration.name : entry.integration_id}</td>
-                        <td>${entry.event_type || '--'}</td>
-                        <td><span class="badge ${String(entry.status).startsWith('success') ? 'bg-success' : String(entry.status).startsWith('http_') ? 'bg-warning text-dark' : 'bg-danger'}">${entry.status || 'unknown'}</span></td>
-                        <td style="max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${entry.response || '--'}</td>`;
+                        <td>${escapeHtml(integration ? integration.name : entry.integration_id)}</td>
+                        <td>${escapeHtml(entry.event_type || '--')}</td>
+                        <td><span class="badge ${String(entry.status).startsWith('success') ? 'bg-success' : String(entry.status).startsWith('http_') ? 'bg-warning text-dark' : 'bg-danger'}">${escapeHtml(entry.status || 'unknown')}</span></td>
+                        <td style="max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(entry.response || '--')}</td>`;
                     eventsBody.appendChild(tr);
                 });
             }
@@ -1336,17 +1353,17 @@ function renderNoteFolderTabs() {
                 <td>${mail.received_at ? new Date(mail.received_at).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '--'}</td>
                 <td>
                     <div class="d-flex flex-column">
-                        <strong>${mail.from_name || mail.from_email || '--'}</strong>
-                        <small class="text-muted">${mail.from_email || ''}</small>
+                        <strong>${escapeHtml(mail.from_name || mail.from_email || '--')}</strong>
+                        <small class="text-muted">${escapeHtml(mail.from_email || '')}</small>
                     </div>
                 </td>
                 <td>
                     <div class="d-flex flex-column">
-                        <strong>${mail.subject || '--'}</strong>
-                        <small class="text-muted text-truncate" style="max-width: 340px;">${mail.snippet || ''}</small>
+                        <strong>${escapeHtml(mail.subject || '--')}</strong>
+                        <small class="text-muted text-truncate" style="max-width: 340px;">${escapeHtml(mail.snippet || '')}</small>
                     </div>
                 </td>
-                <td><span class="badge rounded-pill ${mail.label === 'negocios' ? 'bg-success' : 'bg-secondary'}">${mail.label || '--'}</span></td>
+                <td><span class="badge rounded-pill ${mail.label === 'negocios' ? 'bg-success' : 'bg-secondary'}">${escapeHtml(mail.label || '--')}</span></td>
                 <td><span class="badge rounded-pill ${mail.is_read ? 'bg-secondary' : 'bg-warning text-dark'}">${mail.is_read ? 'Leído' : 'Nuevo'}</span></td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary me-2" data-action="view">Ver</button>
