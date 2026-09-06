@@ -536,8 +536,14 @@ window.startGestorApp = async function startGestorApp() {
     }
 
     function setTaskCreationVisible(visible) {
+        // refreshBoardView() se llama tras guardar/borrar una tarea para
+        // mantener el tablero al día aunque no esté a la vista (p. ej. desde
+        // el Calendario) — sin este chequeo, ese refresco en segundo plano
+        // hacía aparecer el FAB "+ Nueva Tarea" encima de la vista activa.
         const fab = document.getElementById('fab-add-task');
-        if (fab) fab.style.display = visible ? 'flex' : 'none';
+        if (fab && navLinks.board.classList.contains('active')) {
+            fab.style.display = visible ? 'flex' : 'none';
+        }
         document.querySelectorAll('.add-task-inline').forEach((btn) => {
             btn.style.display = visible ? '' : 'none';
         });
@@ -569,7 +575,9 @@ window.startGestorApp = async function startGestorApp() {
     // decir cuál — esto es lo que de verdad pide un "todas mis tareas".
     function renderGlobalBoard() {
         boardMode = 'global';
-        setTaskCreationVisible(false);
+        // El modal ya sabe preguntar a qué proyecto va una tarea nueva
+        // cuando no hay uno obvio, así que crear desde aquí también funciona.
+        setTaskCreationVisible(true);
         const subNav = document.getElementById('view-project-tasks');
         if (subNav) subNav.textContent = 'Mis Tareas';
         ['todo','inprogress','done','paused'].forEach(s=>{
@@ -612,13 +620,31 @@ window.startGestorApp = async function startGestorApp() {
         });
     });
 
-    function openNewTaskModal(status) {
+    // Cuando se crea una tarea sin un proyecto obvio (desde "Mis Tareas" o
+    // desde el Calendario), el modal necesita preguntar a qué proyecto va.
+    // Dentro del tablero de un proyecto puntual esa pregunta sobra: se usa
+    // directamente state.currentProjectId.
+    function openNewTaskModal(status, presetDate) {
         document.getElementById('task-id-input').value='';
         document.getElementById('task-title-input').value='';
         document.getElementById('task-description-input').value='';
         document.getElementById('task-priority-input').value='Media';
-        document.getElementById('task-due-date-input').value='';
+        document.getElementById('task-due-date-input').value=presetDate||'';
         document.getElementById('task-status-input').value=status||'todo';
+
+        const projectField = document.getElementById('task-project-field');
+        const projectSelect = document.getElementById('task-project-input');
+        const currentProject = state.projects.find(x=>x.id===state.currentProjectId);
+        const needsProjectPicker = !(boardMode==='project' && currentProject);
+        if (needsProjectPicker) {
+            projectField.style.display = '';
+            projectSelect.innerHTML = state.projects.length
+                ? state.projects.map(p=>`<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')
+                : '<option value="">Crea un proyecto primero</option>';
+        } else {
+            projectField.style.display = 'none';
+        }
+
         const modal=new bootstrap.Modal(document.getElementById('taskDetailModal'));
         modal.show();
     }
@@ -652,9 +678,14 @@ window.startGestorApp = async function startGestorApp() {
                 if(t){ Object.assign(t, taskData); }
                 if(window.logActivity)window.logActivity('Tarea Actualizada', taskData.title);
             } else {
-                // Crear: solo posible dentro del tablero de un proyecto puntual
-                const p=state.projects.find(x=>x.id===state.currentProjectId);
-                if(!p)return;
+                // Crear: el proyecto viene del selector (Mis Tareas/Calendario)
+                // o, si estaba oculto, del proyecto actual del tablero.
+                const projectFieldVisible = document.getElementById('task-project-field').style.display !== 'none';
+                const projectId = projectFieldVisible
+                    ? document.getElementById('task-project-input').value
+                    : state.currentProjectId;
+                const p=state.projects.find(x=>x.id===projectId);
+                if(!p){ alert('Elige un proyecto para la tarea.'); return; }
                 const newTask=await api.createTask(p.id, taskData);
                 p.tasks.push(newTask);
                 if(window.logActivity)window.logActivity('Tarea Creada', taskData.title);
@@ -662,6 +693,7 @@ window.startGestorApp = async function startGestorApp() {
             bootstrap.Modal.getInstance(document.getElementById('taskDetailModal')).hide();
             refreshBoardView();
             if(navLinks.dashboard.classList.contains('active'))renderDashboard();
+            if(navLinks.calendar.classList.contains('active'))renderCalendar();
         } catch(e){ alert('Error al guardar tarea: '+e.message); }
     });
 
@@ -676,6 +708,7 @@ window.startGestorApp = async function startGestorApp() {
                 if(p) p.tasks=p.tasks.filter(t=>t.id!==id);
                 bootstrap.Modal.getInstance(document.getElementById('taskDetailModal')).hide();
                 refreshBoardView();
+                if(navLinks.calendar.classList.contains('active'))renderCalendar();
             } catch(e){ alert('Error al eliminar tarea: '+e.message); }
         }
     });
@@ -728,6 +761,7 @@ window.startGestorApp = async function startGestorApp() {
             // quedaban en "today/month/week" en inglés).
             buttonText:{ today:'Hoy', month:'Mes', week:'Semana', day:'Día', list:'Lista' },
             events, height:650,
+            dateClick:function(info){ openNewTaskModal('todo', info.dateStr); },
             eventClick:function(info){ state.currentProjectId=info.event.extendedProps.projId; window.editTask(info.event.id,new Event('click')); }
         });
         setTimeout(()=>{calendar.render();},150);
