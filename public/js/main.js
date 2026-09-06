@@ -280,16 +280,26 @@ window.startGestorApp = async function startGestorApp() {
             container.innerHTML = '<p class="text-muted small mt-2">Todavía no hay tareas registradas.</p>';
             return;
         }
-        container.innerHTML = rows.map((p) => `
-            <div class="custom-list-item" style="flex-direction:column; align-items:stretch; gap:0.5rem;">
-                <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
-                    <span style="font-weight:600;">${escapeHtml(p.name)}</span>
-                    <span style="color:var(--text-muted);">${p.done}/${p.total} tareas</span>
+        // Reutiliza la misma paleta que las carpetas de Notas: cada
+        // proyecto recibe un color estable (por hash de su nombre), en vez
+        // de que todas las barras sean del mismo color de acento.
+        container.innerHTML = rows.map((p) => {
+            const color = p.pct === 100 ? '#3f7d58' : fallbackFolderColor(p.name);
+            return `
+            <div class="project-progress-row">
+                <div class="project-progress-icon" style="background:color-mix(in srgb, ${color} 16%, transparent); color:${color};">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
                 </div>
-                <div style="width:100%; background-color:var(--border-color); height:6px; border-radius:4px; overflow:hidden;">
-                    <div style="width:${p.pct}%; background-color:${p.pct===100?'#3f7d58':'var(--sidebar-active)'}; height:100%;"></div>
+                <div class="project-progress-info">
+                    <div class="project-progress-top">
+                        <span class="project-progress-name">${escapeHtml(p.name)}</span>
+                        <span class="project-progress-pct" style="color:${color};">${p.pct}%</span>
+                    </div>
+                    <div class="project-progress-track"><div class="project-progress-fill" style="width:${p.pct}%; background:${color};"></div></div>
+                    <span class="project-progress-count">${p.done}/${p.total} tareas</span>
                 </div>
-            </div>`).join('');
+            </div>`;
+        }).join('');
     }
 
     function renderBusinessGlanceTiles() {
