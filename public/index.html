@@ -90,6 +90,12 @@
                         </ul>
                     </div>
                 </li>
+                <li class="nav-item">
+                    <button type="button" id="sidebar-logout-btn" class="sidebar-logout-btn" style="display:none;">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                        Cerrar sesión
+                    </button>
+                </li>
             </ul>
             <input type="file" id="import-file-input" style="display: none;" accept=".json">
         </aside>
@@ -107,11 +113,10 @@
                     <p id="main-subtitle">Data summary for today</p>
                 </div>
                 <div class="header-actions">
-                    <button type="button" id="header-logout-btn" class="header-logout-btn" style="display:none;">Cerrar sesión</button>
-                    <div class="user-profile">
-                        <div class="avatar"></div>
+                    <button type="button" id="open-profile-btn" class="user-profile" data-bs-toggle="modal" data-bs-target="#profileModal" aria-haspopup="dialog" title="Ver perfil">
+                        <div class="avatar" id="header-avatar" aria-hidden="true"></div>
                         <div class="user-info"><span id="header-user-email">—</span><small>Sesión activa</small></div>
-                    </div>
+                    </button>
                 </div>
             </header>
 
@@ -556,6 +561,41 @@
     </div>
 
     <div class="modal fade" id="addNoteModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content"><div class="modal-header border-0 pb-0"><h5 class="modal-title fw-semibold">Nota</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" id="note-id-input"><div class="mb-3"><label class="form-label small text-muted">Carpeta</label><select id="note-folder-input" class="form-select"></select></div><div class="mb-3"><label class="form-label small text-muted">Título</label><input type="text" id="note-title-input" class="form-control" placeholder="Título de la nota"></div><div class="mb-3"><label class="form-label small text-muted">Contenido</label><textarea id="note-content-input" class="form-control" rows="5" placeholder="Escribe tu nota aquí..."></textarea></div><div class="mb-3"><label class="form-label small text-muted">Color</label><input type="color" id="note-color-input" class="form-control form-control-color w-100" value="#1f6f78"></div></div><div class="modal-footer border-0 pt-0"><button type="button" class="btn btn-primary" style="background-color: var(--sidebar-active); border:none; width: 100%;" id="save-note-btn">Guardar Nota</button></div></div></div></div>
+
+    <div class="modal fade" id="profileModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-semibold">Tu perfil</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="profile-modal-head">
+                        <div class="avatar avatar-lg" id="profile-avatar" aria-hidden="true"></div>
+                        <div>
+                            <div class="profile-modal-email" id="profile-email">—</div>
+                            <div class="profile-modal-sub">Cuenta protegida con Supabase Auth</div>
+                        </div>
+                    </div>
+                    <div class="profile-modal-rows">
+                        <div class="profile-modal-row"><span>Miembro desde</span><strong id="profile-created-at">—</strong></div>
+                        <div class="profile-modal-row"><span>Último acceso</span><strong id="profile-last-sign-in">—</strong></div>
+                        <div class="profile-modal-row"><span>Correo verificado</span><strong id="profile-email-verified">—</strong></div>
+                        <div class="profile-modal-row">
+                            <span>Tema</span>
+                            <div class="theme-switch">
+                                <button type="button" class="theme-switch-btn" id="theme-choice-light">Claro</button>
+                                <button type="button" class="theme-switch-btn" id="theme-choice-dark">Oscuro</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-outline-danger w-100" id="profile-logout-btn">Cerrar sesión</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script type="module" src="js/auth.js"></script>

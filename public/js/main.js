@@ -1501,12 +1501,69 @@ function renderNoteFolderTabs() {
     // ---- TEMA ----
     const savedTheme=localStorage.getItem('theme')||'light';
     document.body.dataset.theme=savedTheme;
-    window.toggleTheme=function(){
-        const newTheme=document.body.dataset.theme==='dark'?'light':'dark';
-        document.body.dataset.theme=newTheme;
-        localStorage.setItem('theme',newTheme);
+
+    function syncThemeButtons() {
+        const lightBtn = document.getElementById('theme-choice-light');
+        const darkBtn = document.getElementById('theme-choice-dark');
+        if (!lightBtn || !darkBtn) return;
+        const isDark = document.body.dataset.theme === 'dark';
+        lightBtn.classList.toggle('active', !isDark);
+        darkBtn.classList.toggle('active', isDark);
+    }
+
+    window.setTheme = function(theme) {
+        document.body.dataset.theme = theme === 'dark' ? 'dark' : 'light';
+        localStorage.setItem('theme', document.body.dataset.theme);
         updateChartsTheme();
+        syncThemeButtons();
     };
+    window.toggleTheme=function(){
+        window.setTheme(document.body.dataset.theme==='dark'?'light':'dark');
+    };
+    syncThemeButtons();
+    document.getElementById('theme-choice-light')?.addEventListener('click', () => window.setTheme('light'));
+    document.getElementById('theme-choice-dark')?.addEventListener('click', () => window.setTheme('dark'));
+
+    // ---- PERFIL ----
+    // Antes: un avatar con el nombre "Admin" hardcodeado (imagen de un
+    // servicio externo) y ningún botón real detrás. Ahora muestra tus
+    // iniciales y abre un perfil con datos reales de tu sesión de Supabase.
+    function userInitials(email) {
+        const local = String(email || '').split('@')[0] || '?';
+        return local.slice(0, 2).toUpperCase();
+    }
+
+    function formatProfileDate(iso) {
+        if (!iso) return '—';
+        try {
+            return new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(iso));
+        } catch {
+            return '—';
+        }
+    }
+
+    function renderProfile() {
+        const user = window.__GESTOR_USER || {};
+        const ini = userInitials(user.email);
+        const headerAvatar = document.getElementById('header-avatar');
+        const profileAvatar = document.getElementById('profile-avatar');
+        if (headerAvatar) headerAvatar.textContent = ini;
+        if (profileAvatar) profileAvatar.textContent = ini;
+        const profileEmail = document.getElementById('profile-email');
+        if (profileEmail) profileEmail.textContent = user.email || '—';
+        const createdEl = document.getElementById('profile-created-at');
+        if (createdEl) createdEl.textContent = formatProfileDate(user.created_at);
+        const lastSignInEl = document.getElementById('profile-last-sign-in');
+        if (lastSignInEl) lastSignInEl.textContent = formatProfileDate(user.last_sign_in_at);
+        const verifiedEl = document.getElementById('profile-email-verified');
+        if (verifiedEl) verifiedEl.textContent = user.email_confirmed_at ? 'Sí' : 'No';
+        syncThemeButtons();
+    }
+    renderProfile();
+    document.getElementById('profileModal')?.addEventListener('show.bs.modal', renderProfile);
+    document.getElementById('profile-logout-btn')?.addEventListener('click', () => {
+        document.getElementById('sidebar-logout-btn')?.click();
+    });
 
     // ---- NAVEGACIÓN ----
     navLinks.dashboard.addEventListener('click',()=>{ showView('dashboard','Performance Overview','Resumen de datos'); renderDashboard(); });

@@ -6,7 +6,7 @@ const appShell = document.getElementById('app-shell');
 const loginForm = document.getElementById('login-form');
 const loginBtn = document.getElementById('login-btn');
 const loginLogoutBtn = document.getElementById('logout-btn');
-const headerLogoutBtn = document.getElementById('header-logout-btn');
+const sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');
 const authMessage = document.getElementById('auth-message');
 
 function setMessage(text, type = 'info') {
@@ -20,7 +20,7 @@ function setLocked(locked) {
     if (authScreen) authScreen.style.display = locked ? 'flex' : 'none';
     if (appShell) appShell.style.display = locked ? 'none' : 'flex';
     if (loginLogoutBtn) loginLogoutBtn.style.display = 'none';
-    if (headerLogoutBtn) headerLogoutBtn.style.display = locked ? 'none' : 'inline-flex';
+    if (sidebarLogoutBtn) sidebarLogoutBtn.style.display = locked ? 'none' : 'flex';
     if (loginForm) loginForm.style.display = locked ? 'grid' : 'none';
 }
 
@@ -128,7 +128,7 @@ async function logout() {
 }
 
 loginLogoutBtn?.addEventListener('click', logout);
-headerLogoutBtn?.addEventListener('click', logout);
+sidebarLogoutBtn?.addEventListener('click', logout);
 
 (async () => {
     try {
