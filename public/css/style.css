@@ -566,6 +566,31 @@ body[data-auth="locked"] {
         .chart-header h3 { font-size: 1.2rem; font-weight: 600; margin: 0; }
         .chart-header p { font-size: 0.8rem; color: var(--text-muted); margin: 0; }
 
+        /* Mismo look que la mini gráfica decorativa del login, en miniatura:
+           un gesto visual coherente entre la puerta de entrada y el
+           Dashboard real, junto al título de la tarjeta que corresponde. */
+        .mini-chart-badge {
+            display: flex;
+            align-items: flex-end;
+            gap: 4px;
+            width: 46px;
+            height: 34px;
+            padding: 5px 7px;
+            border-radius: 10px;
+            background: var(--main-bg);
+            border: 1px solid var(--border-color);
+            flex-shrink: 0;
+        }
+        .mini-chart-bar {
+            flex: 1;
+            min-height: 3px;
+            border-radius: 2px 2px 0 0;
+            background: var(--border-color);
+        }
+        .mini-chart-bar.accent {
+            background: linear-gradient(180deg, #38a6ae, #1f6f78);
+        }
+
         .custom-list { margin-top: 1.5rem; }
         .custom-list-item { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 0; border-bottom: 1px solid var(--border-color); }
         .custom-list-item:last-child { border-bottom: none; }

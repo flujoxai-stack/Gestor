@@ -191,7 +191,16 @@
                             </div>
                             
                             <div class="dash-card">
-                                <div class="chart-header"><div><h3>Progreso por Proyecto</h3><p>Tareas completadas vs pendientes</p></div></div>
+                                <div class="chart-header">
+                                    <div><h3>Progreso por Proyecto</h3><p>Tareas completadas vs pendientes</p></div>
+                                    <div class="mini-chart-badge" aria-hidden="true">
+                                        <span class="mini-chart-bar" style="height:40%;"></span>
+                                        <span class="mini-chart-bar" style="height:65%;"></span>
+                                        <span class="mini-chart-bar accent" style="height:90%;"></span>
+                                        <span class="mini-chart-bar" style="height:55%;"></span>
+                                        <span class="mini-chart-bar" style="height:30%;"></span>
+                                    </div>
+                                </div>
                                 <div style="position: relative; height: 220px; width: 100%;"><canvas id="projectProgressChart"></canvas></div>
                                 <p id="project-progress-empty" class="text-muted small mt-2" style="display:none;">Todavía no hay tareas registradas.</p>
                             </div>
