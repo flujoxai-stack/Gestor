@@ -133,19 +133,19 @@
                                 </div>
                                 <div style="display: flex; flex-direction: column;">
                                     <div class="dash-card" style="flex: 1; display:flex; flex-direction:column; padding: 1.5rem;">
-                                        <div class="chart-header" style="margin-bottom:0.5rem; border-bottom:none;"><div><h3 style="font-size:1.1rem; font-weight:700;">Tracking My Productivity</h3></div></div>
+                                        <div class="chart-header" style="margin-bottom:0.5rem; border-bottom:none;"><div><h3 style="font-size:1.1rem; font-weight:700;">Productividad</h3></div></div>
                                         <div style="display:flex; justify-content:center; align-items:center; flex-direction:column; flex:none; margin-top: 10px;">
                                             <div style="position: relative; width: 180px; height: 100px;">
                                                 <svg width="180" height="100" viewBox="0 0 220 120" id="productivity-gauge"></svg>
                                                 <div style="position: absolute; bottom:-10px; left:50%; transform: translate(-50%, 0); text-align: center;">
                                                     <h3 id="productivity-val" style="margin:0; font-size: 1.8rem; font-weight:700; color: #1f6f78;">0%</h3>
-                                                    <p style="margin:0; font-size: 0.75rem; color: var(--text-muted); margin-top: -3px;">Weekly activity</p>
+                                                    <p style="margin:0; font-size: 0.75rem; color: var(--text-muted); margin-top: -3px;">Actividad semanal</p>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div style="margin-top: 1.5rem;">
+                                        <div style="margin-top: 1.5rem; padding-top: 1.2rem; border-top: 1px solid var(--border-color);">
                                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.8rem;">
-                                                <h3 style="font-size:0.95rem; margin:0; font-weight:600;">Global Time Tracking</h3>
+                                                <h3 style="font-size:0.95rem; margin:0; font-weight:600;">Cronómetro de sesión</h3>
                                             </div>
                                             <div id="time-tracking-container" style="padding: 1.2rem; background-color: var(--card-bg); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
                                                 <div style="display: flex; flex-direction: column;">
@@ -163,7 +163,7 @@
                             
                             <div class="dash-card">
                                 <div class="chart-header"><div><h3>Progreso por Proyecto</h3><p>Tareas completadas vs pendientes</p></div></div>
-                                <div style="position: relative; height: 250px; width: 100%;"><canvas id="barChart"></canvas></div>
+                                <div class="custom-list" id="project-progress-list"></div>
                             </div>
                         </div>
 
@@ -188,16 +188,26 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Fila 2: Area Suave y Polar/Radar -->
-                    <div class="dash-grid-2-1">
-                        <div class="dash-card">
-                            <div class="chart-header"><div><h3>Carga de Trabajo Futura</h3><p>Tareas con vencimiento en los próximos 7 días</p></div></div>
-                            <div style="position: relative; height: 250px; width: 100%;"><canvas id="areaChart"></canvas></div>
+                    <!-- Negocio en un vistazo -->
+                    <div class="dash-top-metrics mt-4" style="grid-template-columns: 1fr 1fr 1fr;">
+                        <div class="dash-card metric-card" style="cursor:pointer;" onclick="document.getElementById('nav-business-mail').click()">
+                            <div class="metric-header"><div class="metric-icon" style="color: #b98a2e; background: rgba(185, 138, 46,0.1);"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></div></div>
+                            <div class="metric-body"><h4>Correos sin leer</h4><h2 id="dash-mail-unread">0</h2></div>
                         </div>
-                        <div class="dash-card">
-                            <div class="chart-header"><div><h3>Análisis de Prioridades</h3><p>Nivel de urgencia</p></div></div>
-                            <div style="position: relative; height: 250px; width: 100%;"><canvas id="radarChart"></canvas></div>
+                        <div class="dash-card metric-card" style="cursor:pointer;" onclick="document.getElementById('nav-pipeline').click()">
+                            <div class="metric-header"><div class="metric-icon" style="color: #1f6f78; background: rgba(31, 111, 120,0.1);"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M4 12h16"></path></svg></div></div>
+                            <div class="metric-body"><h4>Valor en negociación</h4><h2 id="dash-pipeline-value">$0</h2></div>
                         </div>
+                        <div class="dash-card metric-card" style="cursor:pointer;" onclick="document.getElementById('nav-finances').click()">
+                            <div class="metric-header"><div class="metric-icon" style="color: #3f7d58; background: rgba(63, 125, 88,0.1);"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div></div>
+                            <div class="metric-body"><h4>Balance del mes</h4><h2 id="dash-month-balance">$0</h2></div>
+                        </div>
+                    </div>
+
+                    <!-- Carga de Trabajo Futura -->
+                    <div class="dash-card mt-4">
+                        <div class="chart-header"><div><h3>Carga de Trabajo Futura</h3><p>Tareas con vencimiento en los próximos 7 días</p></div></div>
+                        <div style="position: relative; height: 250px; width: 100%;"><canvas id="areaChart"></canvas></div>
                     </div>
 
                     <!-- Fila 3: Finanzas y Pipeline Summary -->
@@ -227,17 +237,6 @@
                                 <div class="custom-list-item" style="padding: 0.5rem 0.8rem;"><div class="item-left">En Ejecución</div><div class="item-right"><span class="badge-blue metric-badge" id="dash-pipe-exe" style="background: rgba(62, 110, 147,0.1); color: #3e6e93;">0</span></div></div>
                                 <div class="custom-list-item" style="padding: 0.5rem 0.8rem;"><div class="item-left">Entregados</div><div class="item-right"><span class="badge-blue metric-badge" id="dash-pipe-done" style="background: rgba(63, 125, 88,0.1); color: #3f7d58;">0</span></div></div>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Fila 3: Polar Area y extras -->
-                    <div class="dash-grid-1-1">
-                        <div class="dash-card">
-                            <div class="chart-header"><div><h3>Densidad por Proyecto</h3><p>Volumen de tareas en cada proyecto</p></div></div>
-                            <div style="position: relative; height: 300px; width: 100%;"><canvas id="polarChart"></canvas></div>
-                        </div>
-                        <div class="dash-card" style="background: transparent; box-shadow: none;">
-                            <!-- Espacio libre para mantener el grid balanceado visualmente -->
                         </div>
                     </div>
 

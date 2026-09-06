@@ -254,14 +254,74 @@ window.startGestorApp = async function startGestorApp() {
     }
 
     // ---- CHARTS ----
-    let barChart, pieChart, areaChart, radarChart, polarChart;
+    let pieChart, areaChart;
     Chart.defaults.font.family = "'IBM Plex Sans', sans-serif";
+
+    // Antes el Dashboard tenía 6 tipos de gráfico distintos (barras, dona,
+    // gauge, área, radar, polar) para apenas un puñado de proyectos y
+    // tareas — el radar y el polar casi no tenían datos que mostrar y
+    // terminaban siendo decoración. Se quitaron los dos, el de barras pasó
+    // a ser una lista (más legible con nombres largos), y se agregó una
+    // fila de "Negocio en un vistazo" con datos que sí cambian con tu
+    // trabajo real: correos sin leer, valor en negociación, balance del mes.
+    function renderProjectProgressList() {
+        const container = document.getElementById('project-progress-list');
+        if (!container) return;
+        const rows = state.projects
+            .map((p) => {
+                const total = p.tasks.length;
+                const done = p.tasks.filter((t) => t.status === 'done').length;
+                return { name: p.name, total, done, pct: total ? Math.round((done / total) * 100) : 0 };
+            })
+            .filter((p) => p.total > 0)
+            .sort((a, b) => b.total - a.total);
+
+        if (!rows.length) {
+            container.innerHTML = '<p class="text-muted small mt-2">Todavía no hay tareas registradas.</p>';
+            return;
+        }
+        container.innerHTML = rows.map((p) => `
+            <div class="custom-list-item" style="flex-direction:column; align-items:stretch; gap:0.5rem;">
+                <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+                    <span style="font-weight:600;">${escapeHtml(p.name)}</span>
+                    <span style="color:var(--text-muted);">${p.done}/${p.total} tareas</span>
+                </div>
+                <div style="width:100%; background-color:var(--border-color); height:6px; border-radius:4px; overflow:hidden;">
+                    <div style="width:${p.pct}%; background-color:${p.pct===100?'#3f7d58':'var(--sidebar-active)'}; height:100%;"></div>
+                </div>
+            </div>`).join('');
+    }
+
+    function renderBusinessGlanceTiles() {
+        const unreadEl = document.getElementById('dash-mail-unread');
+        if (unreadEl) unreadEl.textContent = String(state.businessNotifications.filter((m) => !m.is_read).length);
+
+        const pipelineValueEl = document.getElementById('dash-pipeline-value');
+        if (pipelineValueEl) {
+            const value = state.projects
+                .filter((p) => p.status === 'lead' || p.status === 'negotiation')
+                .reduce((sum, p) => sum + projectPipelineValue(p), 0);
+            pipelineValueEl.textContent = formatMoney(value);
+        }
+
+        const monthBalanceEl = document.getElementById('dash-month-balance');
+        if (monthBalanceEl) {
+            const now = new Date();
+            const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            let monthInc = 0, monthExp = 0;
+            state.finances.forEach((f) => {
+                if (String(f.date || '').startsWith(monthKey)) {
+                    if (f.type === 'income') monthInc += parseFloat(f.amount) || 0;
+                    else monthExp += parseFloat(f.amount) || 0;
+                }
+            });
+            monthBalanceEl.textContent = `$${(monthInc - monthExp).toFixed(2)}`;
+        }
+    }
 
     function renderDashboard() {
         let tTotal=0, tDone=0, tPend=0, tRev=0, tTodo=0;
-        let projNames=[], projDone=[], projPend=[], projTotal=[];
         let upcoming=[];
-        let prioAlta=0, prioMedia=0, prioBaja=0;
         let futureDates=[], futureLabels=[];
         for(let i=0;i<7;i++){
             let d=new Date(); d.setDate(d.getDate()+i);
@@ -271,17 +331,13 @@ window.startGestorApp = async function startGestorApp() {
         let futureCounts=futureDates.map(()=>0);
 
         state.projects.forEach(p=>{
-            let d=0,pd=0,pt=0;
             p.tasks.forEach(t=>{
-                tTotal++;pt++;
-                if(t.status==='done'){tDone++;d++;}
+                tTotal++;
+                if(t.status==='done'){tDone++;}
                 else{
-                    tPend++;pd++;
+                    tPend++;
                     if(t.status==='inprogress')tRev++;
                     if(t.status==='todo')tTodo++;
-                    if(t.priority==='Alta')prioAlta++;
-                    else if(t.priority==='Media')prioMedia++;
-                    else prioBaja++;
                     if(t.dueDate){
                         let idx=futureDates.indexOf(t.dueDate);
                         if(idx!==-1)futureCounts[idx]++;
@@ -289,7 +345,6 @@ window.startGestorApp = async function startGestorApp() {
                     }
                 }
             });
-            projNames.push(p.name);projDone.push(d);projPend.push(pd);projTotal.push(pt);
         });
 
         document.getElementById('stat-total').textContent=tTotal;
@@ -307,18 +362,14 @@ window.startGestorApp = async function startGestorApp() {
         upcoming.slice(0,4).forEach(u=>{
             upList.innerHTML+=`<div class="custom-list-item"><div class="item-left"><div style="width:30px;height:30px;border-radius:50%;background:rgba(31, 111, 120,0.12);display:flex;align-items:center;justify-content:center;color:#1f6f78;flex-shrink:0;">${ICON_CALENDAR}</div> <div style="display:flex; flex-direction:column; justify-content:center;"><div style="font-size:0.85rem;line-height:1.2;font-weight:600;">${escapeHtml(u.title)}</div><small style="font-size:0.7rem;color:var(--text-muted);">${escapeHtml(u.pName)}</small></div></div><div class="item-right" style="font-size:0.8rem;color:var(--text-muted);text-align:right;">${escapeHtml(u.date)}</div></div>`;
         });
-        if(upcoming.length===0)upList.innerHTML='<p class="text-muted small mt-2">No hay tareas pendientes con fecha.</p>';
+        if(upcoming.length===0){
+            upList.innerHTML=`<div style="text-align:center; padding:1.5rem 0.5rem; color:var(--text-muted);"><div style="display:flex; justify-content:center; margin-bottom:0.6rem; opacity:0.6;">${ICON_CALENDAR}</div><p class="small mb-0">No tienes tareas con fecha próxima.</p><p class="small mb-0">Agrégale una fecha de vencimiento a una tarea para verla aquí.</p></div>`;
+        }
 
         const txtColor=document.body.dataset.theme==='dark'?'#edeef0':'#6b7280';
         const gridColor=document.body.dataset.theme==='dark'?'#2e333b':'#e2e5e9';
 
-        if(barChart)barChart.destroy();
-        let barCtx=document.getElementById('barChart').getContext('2d');
-        let gradDone=barCtx.createLinearGradient(0,0,0,400);
-        gradDone.addColorStop(0,'#3f7d58');gradDone.addColorStop(1,'#2c5a3f');
-        let gradPend=barCtx.createLinearGradient(0,0,0,400);
-        gradPend.addColorStop(0,'#1f7d87');gradPend.addColorStop(1,'#144850');
-        barChart=new Chart(document.getElementById('barChart'),{type:'bar',data:{labels:projNames,datasets:[{label:'Completadas',data:projDone,backgroundColor:gradDone,borderRadius:8},{label:'Pendientes',data:projPend,backgroundColor:gradPend,borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false},ticks:{color:txtColor,maxRotation:45,minRotation:45}},y:{grid:{color:gridColor},border:{display:false},ticks:{color:txtColor,stepSize:2}}},plugins:{legend:{display:true,position:'top',labels:{color:txtColor}}}}});
+        renderProjectProgressList();
 
         if(pieChart)pieChart.destroy();
         pieChart=new Chart(document.getElementById('pieChart'),{type:'doughnut',data:{labels:['Completadas','En Revisión','Por Hacer'],datasets:[{data:[tDone,tRev,tTodo],backgroundColor:['#1f6f78','#3f7d58','#b4453d'],borderWidth:0,cutout:'75%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
@@ -329,11 +380,7 @@ window.startGestorApp = async function startGestorApp() {
         gradient.addColorStop(0,'rgba(31, 111, 120,0.4)');gradient.addColorStop(1,'rgba(31, 111, 120,0.0)');
         areaChart=new Chart(document.getElementById('areaChart'),{type:'line',data:{labels:futureLabels,datasets:[{label:'Tareas a vencer',data:futureCounts,borderColor:'#1f6f78',backgroundColor:gradient,fill:true,tension:0.4,pointBackgroundColor:'#fff',pointBorderColor:'#1f6f78',pointBorderWidth:2,pointRadius:4}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{grid:{display:false},ticks:{color:txtColor}},y:{grid:{color:gridColor},border:{display:false},ticks:{color:txtColor,stepSize:1}}},plugins:{legend:{display:false}}}});
 
-        if(radarChart)radarChart.destroy();
-        radarChart=new Chart(document.getElementById('radarChart'),{type:'radar',data:{labels:['Alta','Media','Baja'],datasets:[{label:'Prioridades',data:[prioAlta,prioMedia,prioBaja],backgroundColor:'rgba(63, 125, 88,0.2)',borderColor:'#3f7d58',pointBackgroundColor:'#3f7d58',pointBorderColor:'#fff',pointHoverBackgroundColor:'#fff',pointHoverBorderColor:'#3f7d58'}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{angleLines:{color:gridColor},grid:{color:gridColor},pointLabels:{color:txtColor,font:{size:13}},ticks:{display:false,stepSize:1}}},plugins:{legend:{display:false}}}});
-
-        if(polarChart)polarChart.destroy();
-        polarChart=new Chart(document.getElementById('polarChart'),{type:'polarArea',data:{labels:projNames,datasets:[{data:projTotal,backgroundColor:['rgba(31, 111, 120,0.6)','rgba(63, 125, 88,0.6)','rgba(180, 69, 61,0.6)','rgba(185, 138, 46,0.6)','rgba(62, 110, 147,0.6)'],borderWidth:1,borderColor:document.body.dataset.theme==='dark'?'#1e2128':'#fff'}]},options:{responsive:true,maintainAspectRatio:false,scales:{r:{grid:{color:gridColor},ticks:{display:false}}},plugins:{legend:{position:'right',labels:{color:txtColor}}}}});
+        renderBusinessGlanceTiles();
 
         let inc=0,exp=0;
         state.finances.forEach(f=>{if(f.type==='income')inc+=parseFloat(f.amount);else exp+=parseFloat(f.amount);});
