@@ -280,11 +280,13 @@ window.startGestorApp = async function startGestorApp() {
             container.innerHTML = '<p class="text-muted small mt-2">Todavía no hay tareas registradas.</p>';
             return;
         }
-        // Reutiliza la misma paleta que las carpetas de Notas: cada
-        // proyecto recibe un color estable (por hash de su nombre), en vez
-        // de que todas las barras sean del mismo color de acento.
-        container.innerHTML = rows.map((p) => {
-            const color = p.pct === 100 ? '#3f7d58' : fallbackFolderColor(p.name);
+        // Mismos colores que ya usan la dona "Estado de Tareas" y los
+        // íconos de KPI del propio Dashboard (teal, verde, ámbar, azul
+        // acero, rojo) — ciclados por posición para que nunca se repitan
+        // entre dos filas seguidas, en vez de un color nuevo por proyecto.
+        const PROGRESS_COLORS = ['#1f6f78', '#3f7d58', '#b98a2e', '#3e6e93', '#b4453d'];
+        container.innerHTML = rows.map((p, index) => {
+            const color = p.pct === 100 ? '#3f7d58' : PROGRESS_COLORS[index % PROGRESS_COLORS.length];
             return `
             <div class="project-progress-row">
                 <div class="project-progress-icon" style="background:color-mix(in srgb, ${color} 16%, transparent); color:${color};">
