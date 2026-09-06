@@ -254,19 +254,21 @@ window.startGestorApp = async function startGestorApp() {
     }
 
     // ---- CHARTS ----
-    let pieChart, areaChart;
+    let pieChart, areaChart, progressChart;
     Chart.defaults.font.family = "'IBM Plex Sans', sans-serif";
 
     // Antes el Dashboard tenía 6 tipos de gráfico distintos (barras, dona,
     // gauge, área, radar, polar) para apenas un puñado de proyectos y
     // tareas — el radar y el polar casi no tenían datos que mostrar y
-    // terminaban siendo decoración. Se quitaron los dos, el de barras pasó
-    // a ser una lista (más legible con nombres largos), y se agregó una
+    // terminaban siendo decoración. Se quitaron los dos, y se agregó una
     // fila de "Negocio en un vistazo" con datos que sí cambian con tu
     // trabajo real: correos sin leer, valor en negociación, balance del mes.
-    function renderProjectProgressList() {
-        const container = document.getElementById('project-progress-list');
-        if (!container) return;
+    // El de "Progreso por Proyecto" es un gráfico de barras real (Chart.js,
+    // con esquinas redondeadas) en vez de una lista con barritas planas.
+    function renderProjectProgressChart() {
+        const canvas = document.getElementById('projectProgressChart');
+        const emptyMsg = document.getElementById('project-progress-empty');
+        if (!canvas) return;
         const rows = state.projects
             .map((p) => {
                 const total = p.tasks.length;
@@ -276,40 +278,71 @@ window.startGestorApp = async function startGestorApp() {
             .filter((p) => p.total > 0)
             .sort((a, b) => b.total - a.total);
 
+        if (progressChart) { progressChart.destroy(); progressChart = null; }
+
         if (!rows.length) {
-            container.innerHTML = '<p class="text-muted small mt-2">Todavía no hay tareas registradas.</p>';
+            canvas.style.display = 'none';
+            if (emptyMsg) emptyMsg.style.display = 'block';
             return;
         }
-        // Mismos colores que ya usan la dona "Estado de Tareas" y los
+        canvas.style.display = 'block';
+        if (emptyMsg) emptyMsg.style.display = 'none';
+
+        // Mismos colores que ya usa la dona "Estado de Tareas" y los
         // íconos de KPI del propio Dashboard (teal, ámbar, azul acero,
         // rojo). El verde queda reservado solo para el 100% completado
         // (como en la dona), así nunca compite con el ciclo y nunca
-        // salen dos filas seguidas del mismo color.
+        // salen dos barras seguidas del mismo color.
         const PROGRESS_COLORS = ['#1f6f78', '#b98a2e', '#3e6e93', '#b4453d'];
         let colorIndex = 0;
-        container.innerHTML = rows.map((p) => {
-            let color;
-            if (p.pct === 100) {
-                color = '#3f7d58';
-            } else {
-                color = PROGRESS_COLORS[colorIndex % PROGRESS_COLORS.length];
-                colorIndex++;
+        const colors = rows.map((p) => {
+            if (p.pct === 100) return '#3f7d58';
+            const c = PROGRESS_COLORS[colorIndex % PROGRESS_COLORS.length];
+            colorIndex++;
+            return c;
+        });
+
+        const txtColor = document.body.dataset.theme === 'dark' ? '#9aa1ac' : '#6b7280';
+        const gridColor = document.body.dataset.theme === 'dark' ? '#2e333b' : '#e2e5e9';
+
+        progressChart = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: rows.map((p) => p.name),
+                datasets: [{
+                    data: rows.map((p) => p.pct),
+                    backgroundColor: colors,
+                    borderRadius: 8,
+                    borderSkipped: false,
+                    maxBarThickness: 40
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: txtColor, font: { size: 11 } } },
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: gridColor },
+                        border: { display: false },
+                        ticks: { color: txtColor, stepSize: 25, callback: (v) => v + '%' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => {
+                                const p = rows[ctx.dataIndex];
+                                return `${p.pct}% completado (${p.done}/${p.total} tareas)`;
+                            }
+                        }
+                    }
+                }
             }
-            return `
-            <div class="project-progress-row">
-                <div class="project-progress-icon" style="background:color-mix(in srgb, ${color} 16%, transparent); color:${color};">
-                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
-                </div>
-                <div class="project-progress-info">
-                    <div class="project-progress-top">
-                        <span class="project-progress-name">${escapeHtml(p.name)}</span>
-                        <span class="project-progress-pct" style="color:${color};">${p.pct}%</span>
-                    </div>
-                    <div class="project-progress-track"><div class="project-progress-fill" style="width:${p.pct}%; background:${color};"></div></div>
-                    <span class="project-progress-count">${p.done}/${p.total} tareas</span>
-                </div>
-            </div>`;
-        }).join('');
+        });
     }
 
     function renderBusinessGlanceTiles() {
@@ -389,7 +422,7 @@ window.startGestorApp = async function startGestorApp() {
         const txtColor=document.body.dataset.theme==='dark'?'#edeef0':'#6b7280';
         const gridColor=document.body.dataset.theme==='dark'?'#2e333b':'#e2e5e9';
 
-        renderProjectProgressList();
+        renderProjectProgressChart();
 
         if(pieChart)pieChart.destroy();
         pieChart=new Chart(document.getElementById('pieChart'),{type:'doughnut',data:{labels:['Completadas','En Revisión','Por Hacer'],datasets:[{data:[tDone,tRev,tTodo],backgroundColor:['#1f6f78','#3f7d58','#b4453d'],borderWidth:0,cutout:'75%'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}}});
