@@ -74,6 +74,12 @@ async function applySession(session) {
     setLocked(false);
     setMessage('');
 
+    // DIS-03: mostrar el correo real de la sesión en vez de un perfil
+    // fijo ("Admin Store / Pro User") que no era la persona que usa la app.
+    const email = session.user?.email || '';
+    document.getElementById('sidebar-user-email')?.replaceChildren(email);
+    document.getElementById('header-user-email')?.replaceChildren(email);
+
     if (typeof window.startGestorApp === 'function') {
         await window.startGestorApp();
     }

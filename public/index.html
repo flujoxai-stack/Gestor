@@ -1,4 +1,3 @@
-<!-- test-deploy: 2026-09-05 -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -6,8 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Proyectos</title>
     <script>
-        window.onerror = function(msg, url, line, col, error) {
-            alert("Error: " + msg + "\nLine: " + line + "\nCol: " + col);
+        // DIS-04: antes esto mostraba un alert() nativo con el error crudo
+        // ante cualquier fallo de JS. Un error de la app nunca debe
+        // interrumpir a la persona que la usa con un cuadro de diálogo del
+        // navegador — se registra en consola para depurar y ya.
+        window.onerror = function (msg, url, line, col) {
+            console.error('Error de la aplicación:', msg, `(${url}:${line}:${col})`);
         };
     </script>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236e48c1' stroke-width='2'><path d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'></path></svg>">
@@ -46,6 +49,10 @@
     </div>
 
     <div id="app-shell" class="app-container" style="display:none;">
+        <div id="app-loading-overlay" class="app-loading-overlay">
+            <div class="app-loading-spinner" aria-hidden="true"></div>
+            <p>Cargando tu información…</p>
+        </div>
         <div id="sidebar-backdrop" class="sidebar-backdrop" aria-hidden="true"></div>
         <!-- Sidebar -->
         <aside id="sidebar-menu" class="sidebar">
@@ -53,7 +60,7 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
                 GestorPro
             </a>
-            <div style="font-size: 0.8rem; color: var(--text-muted); padding-left: 2.8rem; margin-bottom: 1.5rem; margin-top: -5px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">flujoxai</div>
+            <div id="sidebar-user-email" style="font-size: 0.8rem; color: var(--text-muted); padding-left: 2.8rem; margin-bottom: 1.5rem; margin-top: -5px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;"></div>
             
             <div class="nav-section-title">MENU</div>
             <ul class="nav-menu">
@@ -84,7 +91,6 @@
                     </div>
                 </li>
             </ul>
-            <div class="nav-bottom-card mt-3"><h6>Upgrade to Pro</h6><p>Discover the benefits of an upgraded account</p><button class="nav-bottom-btn">Upgrade 30</button></div>
             <input type="file" id="import-file-input" style="display: none;" accept=".json">
         </aside>
 
@@ -104,7 +110,7 @@
                     <button type="button" id="header-logout-btn" class="header-logout-btn" style="display:none;">Cerrar sesión</button>
                     <div class="user-profile">
                         <div class="avatar"></div>
-                        <div class="user-info"><span>Admin Store</span><small>Pro User</small></div>
+                        <div class="user-info"><span id="header-user-email">—</span><small>Sesión activa</small></div>
                     </div>
                 </div>
             </header>
@@ -555,20 +561,5 @@
 
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container-custom"></div>
-
-    <!-- Copilot Demo Widget -->
-    <div style="position: fixed; bottom: 30px; right: 30px; z-index: 1050; display: flex; flex-direction: column; align-items: flex-end; gap: 15px;">
-        <div id="copilot-tooltip" style="background: var(--card-bg); color: var(--text-main); padding: 15px 20px; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.15); font-size: 0.9rem; border: 1px solid var(--border-color); display: none; margin-right: 10px; max-width: 250px;">
-            <div style="font-weight: 600; margin-bottom: 5px; color: #6e48c1; display:flex; align-items:center; gap:5px;">
-                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/></svg> GestorPro Copilot
-            </div>
-            <div id="copilot-text"></div>
-        </div>
-        <button id="copilot-btn" onclick="openCopilotDemo()" onmouseover="this.style.transform='scale(1.1)';" onmouseout="this.style.transform='scale(1)';" style="width: 60px; height: 60px; border-radius: 50%; border: none; background: linear-gradient(135deg, #6e48c1, #ec4899); color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(110, 72, 193, 0.4); cursor: pointer; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
-            <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-                <path d="M12 2l3 7 7 3-7 3-3 7-3-7-7-3 7-3z"/>
-            </svg>
-        </button>
-    </div>
 </body>
 </html>

@@ -1428,18 +1428,6 @@ function renderNoteFolderTabs() {
         }
     });
 
-    // ---- COPILOT ----
-    window.openCopilotDemo=function(){
-        const t=document.getElementById('copilot-tooltip');
-        const p=document.getElementById('copilot-text');
-        if(t.style.display==='none'||!t.style.display){
-            t.style.display='block'; p.innerHTML='';
-            const msg=`¡Hola! He detectado ${state.projects.length} proyectos con ${state.projects.reduce((a,p)=>a+p.tasks.length,0)} tareas. ¿Quieres que prepare un reporte?`;
-            let i=0;
-            const typing=setInterval(()=>{ p.innerHTML+=msg.charAt(i); i++; if(i>=msg.length)clearInterval(typing); },40);
-        } else { t.style.display='none'; }
-    };
-
     // ---- TEMA ----
     const savedTheme=localStorage.getItem('theme')||'light';
     document.body.dataset.theme=savedTheme;
@@ -1468,6 +1456,7 @@ function renderNoteFolderTabs() {
     // ---- INICIO ----
     showView('dashboard','Performance Overview','Resumen de datos');
     renderDashboard();
+    document.getElementById('app-loading-overlay')?.setAttribute('hidden', '');
     await refreshBusinessMailState();
     await refreshIntegrationsState();
 }
@@ -1475,5 +1464,7 @@ function renderNoteFolderTabs() {
 if (window.__GESTOR_AUTH_READY && window.__GESTOR_ACCESS_TOKEN) {
     window.startGestorApp().catch((error) => {
         console.error('Error iniciando la app:', error);
+        // No dejar el overlay de carga trabado si algo falla arrancando la app.
+        document.getElementById('app-loading-overlay')?.setAttribute('hidden', '');
     });
 }
