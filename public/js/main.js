@@ -281,12 +281,20 @@ window.startGestorApp = async function startGestorApp() {
             return;
         }
         // Mismos colores que ya usan la dona "Estado de Tareas" y los
-        // íconos de KPI del propio Dashboard (teal, verde, ámbar, azul
-        // acero, rojo) — ciclados por posición para que nunca se repitan
-        // entre dos filas seguidas, en vez de un color nuevo por proyecto.
-        const PROGRESS_COLORS = ['#1f6f78', '#3f7d58', '#b98a2e', '#3e6e93', '#b4453d'];
-        container.innerHTML = rows.map((p, index) => {
-            const color = p.pct === 100 ? '#3f7d58' : PROGRESS_COLORS[index % PROGRESS_COLORS.length];
+        // íconos de KPI del propio Dashboard (teal, ámbar, azul acero,
+        // rojo). El verde queda reservado solo para el 100% completado
+        // (como en la dona), así nunca compite con el ciclo y nunca
+        // salen dos filas seguidas del mismo color.
+        const PROGRESS_COLORS = ['#1f6f78', '#b98a2e', '#3e6e93', '#b4453d'];
+        let colorIndex = 0;
+        container.innerHTML = rows.map((p) => {
+            let color;
+            if (p.pct === 100) {
+                color = '#3f7d58';
+            } else {
+                color = PROGRESS_COLORS[colorIndex % PROGRESS_COLORS.length];
+                colorIndex++;
+            }
             return `
             <div class="project-progress-row">
                 <div class="project-progress-icon" style="background:color-mix(in srgb, ${color} 16%, transparent); color:${color};">
