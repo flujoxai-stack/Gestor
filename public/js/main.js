@@ -322,7 +322,9 @@ window.startGestorApp = async function startGestorApp() {
                         backgroundColor: pendingColor,
                         borderRadius: 8,
                         borderSkipped: false,
-                        maxBarThickness: 28
+                        maxBarThickness: 34,
+                        barPercentage: 1,
+                        categoryPercentage: 0.55
                     },
                     {
                         label: 'Completado',
@@ -330,7 +332,9 @@ window.startGestorApp = async function startGestorApp() {
                         backgroundColor: colors,
                         borderRadius: 8,
                         borderSkipped: false,
-                        maxBarThickness: 28
+                        maxBarThickness: 34,
+                        barPercentage: 1,
+                        categoryPercentage: 0.55
                     }
                 ]
             },
