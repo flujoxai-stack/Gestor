@@ -774,6 +774,11 @@ body[data-auth="locked"] {
         ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.2); }
         .modal-content { background-color: var(--card-bg); color: var(--text-main); border-radius: 20px;}
         .form-control, .form-select { background-color: var(--main-bg); color: var(--text-main); border-color: var(--border-color); border-radius: 10px; padding: 0.6rem 1rem;}
+
+        .notes-search-wrap { position: relative; max-width: 360px; }
+        .notes-search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; }
+        .notes-search-input { padding-left: 40px; }
+        .notes-search-input::-webkit-search-cancel-button { cursor: pointer; }
         body[data-theme="dark"] .btn-close { filter: invert(1); }
 
         /* Calendario: FullCalendar trae su propio look (enlaces azules

@@ -1231,7 +1231,17 @@ function renderNoteFolderTabs() {
 
     function renderNotesList() {
         const list=document.getElementById('notes-list'); if(!list)return; list.innerHTML='';
-        const filtered=state.notes.filter(n=>n.folder===currentNoteFolder);
+        // Con texto en el buscador, se busca por nombre en TODAS las
+        // carpetas (para eso sirve: no tener que ir carpeta por carpeta).
+        // Vacío el buscador, vuelve a filtrar solo por la carpeta activa.
+        const searchInput = document.getElementById('notes-search-input');
+        const query = (searchInput?.value || '').trim().toLowerCase();
+        const searching = query.length > 0;
+        const filtered = searching
+            ? state.notes.filter(n => n.title.toLowerCase().includes(query))
+            : state.notes.filter(n => n.folder === currentNoteFolder);
+        const tabsEl = document.getElementById('notes-folders-tabs');
+        if (tabsEl) tabsEl.style.opacity = searching ? '0.4' : '1';
         filtered.forEach(n=>{
             const div=document.createElement('div');
             div.className = 'note-folder-card';
@@ -1256,7 +1266,9 @@ function renderNoteFolderTabs() {
             list.appendChild(div);
         });
         if(filtered.length===0){
-            list.innerHTML='<p class="text-muted small">No hay notas en esta carpeta.</p>';
+            list.innerHTML = searching
+                ? `<p class="text-muted small">Ninguna nota coincide con "${escapeHtml(query)}".</p>`
+                : '<p class="text-muted small">No hay notas en esta carpeta.</p>';
         }
     }
 

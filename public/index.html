@@ -374,6 +374,10 @@
                 <!-- Notes View -->
                 <div id="notes-view" style="display: none;">
                     <div class="d-flex justify-content-between align-items-center mb-3"><h4 class="mb-0 fw-semibold">Mis Notas</h4><div><button class="btn btn-outline-secondary me-2" style="border-radius:20px; font-size:0.85rem;" onclick="promptNewFolder()">+ Carpeta</button><button class="btn btn-primary" style="background-color: var(--sidebar-active); border:none;" onclick="addNote()">+ Nueva Nota</button></div></div>
+                    <div class="notes-search-wrap mb-3">
+                        <svg class="notes-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><path stroke-linecap="round" d="M21 21l-3.6-3.6"></path></svg>
+                        <input type="search" id="notes-search-input" class="form-control notes-search-input" placeholder="Buscar nota por nombre…" oninput="renderNotesList()">
+                    </div>
                     <div class="d-flex gap-2 mb-4" id="notes-folders-tabs" style="overflow-x: auto; padding-bottom: 5px;"></div>
                     <div id="notes-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.5rem; align-items: start;">
                         <!-- Notes will be injected here -->
