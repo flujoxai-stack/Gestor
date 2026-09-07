@@ -76,9 +76,14 @@ async function applySession(session) {
 
     // DIS-03: mostrar el correo real de la sesión en vez de un perfil
     // fijo ("Admin Store / Pro User") que no era la persona que usa la app.
+    // El sidebar y el header solo necesitan un nombre corto, no el correo
+    // completo -- se deriva de la parte antes de "@" (ej. "flujoxai" de
+    // "flujoxai@gmail.com"). El correo completo sigue visible tal cual en
+    // el modal de Perfil (#profile-email), donde sí es información útil.
     const email = session.user?.email || '';
-    document.getElementById('sidebar-user-email')?.replaceChildren(email);
-    document.getElementById('header-user-email')?.replaceChildren(email);
+    const displayName = email.split('@')[0].replace(/^./, (c) => c.toUpperCase()) || email;
+    document.getElementById('sidebar-user-email')?.replaceChildren(displayName);
+    document.getElementById('header-user-email')?.replaceChildren(displayName);
 
     if (typeof window.startGestorApp === 'function') {
         await window.startGestorApp();
