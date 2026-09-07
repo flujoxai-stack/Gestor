@@ -199,7 +199,16 @@
 
                         <div class="dash-left-col">
                             <div class="dash-card">
-                                <div class="chart-header"><div><h3>Estado de Tareas</h3><p>Distribución global</p></div></div>
+                                <div class="chart-header">
+                                    <div><h3>Estado de Tareas</h3><p>Distribución global</p></div>
+                                    <div class="mini-chart-badge" id="dash-mini-progress-badge" title="Vista rápida: % de avance de tus proyectos" aria-hidden="true">
+                                        <span class="mini-chart-bar" style="height:4%;"></span>
+                                        <span class="mini-chart-bar" style="height:4%;"></span>
+                                        <span class="mini-chart-bar" style="height:4%;"></span>
+                                        <span class="mini-chart-bar" style="height:4%;"></span>
+                                        <span class="mini-chart-bar" style="height:4%;"></span>
+                                    </div>
+                                </div>
                                 <div style="position: relative; height: 180px; display: flex; justify-content: center;">
                                     <canvas id="pieChart"></canvas>
                                     <div style="position: absolute; top:50%; left:50%; transform: translate(-50%, -50%); text-align: center;"><h3 id="pie-center-val" style="margin:0; font-size: 1.5rem; font-weight:700;">0</h3><p style="margin:0; font-size:0.7rem; color:var(--text-muted);">Total</p></div>

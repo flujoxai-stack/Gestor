@@ -283,6 +283,7 @@ window.startGestorApp = async function startGestorApp() {
         if (!rows.length) {
             canvas.style.display = 'none';
             if (emptyMsg) emptyMsg.style.display = 'block';
+            updateMiniProgressBadge([], []);
             return;
         }
         canvas.style.display = 'block';
@@ -301,6 +302,8 @@ window.startGestorApp = async function startGestorApp() {
             colorIndex++;
             return c;
         });
+
+        updateMiniProgressBadge(rows, colors);
 
         const txtColor = document.body.dataset.theme === 'dark' ? '#9aa1ac' : '#6b7280';
         const gridColor = document.body.dataset.theme === 'dark' ? '#2e333b' : '#e2e5e9';
@@ -369,6 +372,30 @@ window.startGestorApp = async function startGestorApp() {
                         }
                     }
                 }
+            }
+        });
+    }
+
+    // El ícono junto a "Estado de Tareas" es un resumen real, no
+    // decoración: cada barrita es uno de tus primeros 5 proyectos (mismo
+    // orden y colores que el gráfico grande de "Progreso por Proyecto")
+    // y su alto es su % de avance real. Con menos de 5 proyectos, las
+    // barras sobrantes quedan como base mínima gris.
+    function updateMiniProgressBadge(rows, colors) {
+        const badge = document.getElementById('dash-mini-progress-badge');
+        if (!badge) return;
+        const bars = badge.querySelectorAll('.mini-chart-bar');
+        const mutedColor = document.body.dataset.theme === 'dark' ? '#3a3f47' : '#e2e5e9';
+        bars.forEach((bar, i) => {
+            const p = rows[i];
+            if (p) {
+                bar.style.height = Math.max(p.pct, 4) + '%';
+                bar.style.background = colors[i];
+                bar.title = `${p.name}: ${p.pct}%`;
+            } else {
+                bar.style.height = '4%';
+                bar.style.background = mutedColor;
+                bar.removeAttribute('title');
             }
         });
     }
