@@ -10,6 +10,7 @@
 // ESTADO GLOBAL
 // ========================================================
 let state = {
+    companies: [],
     projects: [],
     currentProjectId: null,
     finances: [],
@@ -45,6 +46,7 @@ const ICON_ACTIVITY = '<svg width="16" height="16" fill="none" stroke="currentCo
 async function loadState() {
     try {
         const data = await api.getState();
+        state.companies      = data.companies      || [];
         state.projects       = data.projects       || [];
         state.finances       = data.finances       || [];
         state.activities     = data.activities     || [];
@@ -60,6 +62,7 @@ async function loadState() {
     } catch (e) {
         console.error('Error cargando estado desde servidor:', e);
         // Fallback a estado vacío
+        if (!state.companies)   state.companies = [];
         if (!state.projects)    state.projects = [];
         if (!state.finances)    state.finances = [];
         if (!state.activities)  state.activities = [];
@@ -175,6 +178,7 @@ window.startGestorApp = async function startGestorApp() {
     const views = {
         dashboard: document.getElementById('dashboard-view'),
         projects:  document.getElementById('projects-view'),
+        companies: document.getElementById('companies-view'),
         board:     document.getElementById('board-view'),
         calendar:  document.getElementById('calendar-view'),
         finances:  document.getElementById('finances-view'),
@@ -187,6 +191,7 @@ window.startGestorApp = async function startGestorApp() {
     const navLinks = {
         dashboard: document.getElementById('nav-dashboard'),
         projects:  document.getElementById('nav-projects'),
+        companies: document.getElementById('nav-companies'),
         board:     document.getElementById('nav-tasks'),
         calendar:  document.getElementById('nav-calendar'),
         finances:  document.getElementById('nav-finances'),
@@ -595,8 +600,12 @@ window.startGestorApp = async function startGestorApp() {
                 datesHtml+=`<div style="display:flex;justify-content:space-between;margin-top:0.5rem;font-size:0.75rem;color:var(--text-muted);background:rgba(63, 125, 88,0.1);padding:0.3rem 0.5rem;border-radius:6px;"><span><span style="color:#3f7d58;font-weight:500;">Garantía Inc:</span> ${escapeHtml(wStart||'--')}</span><span><span style="color:#3f7d58;font-weight:500;">Garantía Fin:</span> ${escapeHtml(wEnd||'--')}</span></div>`;
             }
             const hasWarranty = !!(wStart || wEnd);
+            const company = p.company_id ? state.companies.find(c => String(c.id) === String(p.company_id)) : null;
+            const companyTagHtml = company
+                ? `<span class="metric-badge" style="background:rgba(31, 111, 120,0.1);color:var(--sidebar-active);font-size:0.72rem;margin-bottom:0.4rem;display:inline-block;">${escapeHtml(company.name)}</span><br>`
+                : '';
             const el=document.createElement('div'); el.className='col';
-            el.innerHTML=`<div class="project-card" onclick="openProject('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div style="width:42px;height:42px;border-radius:12px;background:var(--main-bg);color:var(--sidebar-active);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg></div><div style="display:flex;align-items:center;gap:8px;"><span class="metric-badge" style="background:var(--main-bg);color:var(--text-muted);font-size:0.75rem;">${progress}%</span><button class="btn-action-icon" style="padding:4px;${hasWarranty ? 'color:#3f7d58;' : ''}" onclick="openEditWarranty('${p.id}',event)" title="${hasWarranty ? 'Garantía asignada' : 'Asignar garantía'}"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg></button><button class="btn-action-icon btn-action-delete" style="padding:4px;" onclick="deleteProject('${p.id}',event)" title="Eliminar Proyecto">${ICON_TRASH}</button></div></div><h5 style="color:var(--text-main);font-weight:600;margin-bottom:0.2rem;">${escapeHtml(p.name)}</h5><p class="text-muted small m-0">${p.tasks.length} Tareas</p>${datesHtml}<div style="width:100%;background-color:var(--border-color);height:6px;border-radius:4px;margin-top:1rem;overflow:hidden;"><div style="width:${progress}%;background-color:${progress===100?'#3f7d58':'var(--sidebar-active)'};height:100%;transition:width 0.3s ease;"></div></div></div>`;
+            el.innerHTML=`<div class="project-card" onclick="openProject('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div style="width:42px;height:42px;border-radius:12px;background:var(--main-bg);color:var(--sidebar-active);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg></div><div style="display:flex;align-items:center;gap:8px;"><span class="metric-badge" style="background:var(--main-bg);color:var(--text-muted);font-size:0.75rem;">${progress}%</span><button class="btn-action-icon" style="padding:4px;${hasWarranty ? 'color:#3f7d58;' : ''}" onclick="openEditWarranty('${p.id}',event)" title="${hasWarranty ? 'Garantía asignada' : 'Asignar garantía'}"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg></button><button class="btn-action-icon btn-action-delete" style="padding:4px;" onclick="deleteProject('${p.id}',event)" title="Eliminar Proyecto">${ICON_TRASH}</button></div></div>${companyTagHtml}<h5 style="color:var(--text-main);font-weight:600;margin-bottom:0.2rem;">${escapeHtml(p.name)}</h5><p class="text-muted small m-0">${p.tasks.length} Tareas</p>${datesHtml}<div style="width:100%;background-color:var(--border-color);height:6px;border-radius:4px;margin-top:1rem;overflow:hidden;"><div style="width:${progress}%;background-color:${progress===100?'#3f7d58':'var(--sidebar-active)'};height:100%;transition:width 0.3s ease;"></div></div></div>`;
             list.appendChild(el);
         });
     }
@@ -627,14 +636,25 @@ window.startGestorApp = async function startGestorApp() {
     };
 
     // Modal proyecto
+    function populateProjectCompanySelect() {
+        const sel = document.getElementById('new-project-company');
+        if (!sel) return;
+        const current = sel.value;
+        sel.innerHTML = '<option value="">Sin empresa</option>' +
+            state.companies.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+        sel.value = current;
+    }
+    document.getElementById('addProjectModal').addEventListener('show.bs.modal', populateProjectCompanySelect);
+
     const addProjectModal = new bootstrap.Modal(document.getElementById('addProjectModal'));
     document.getElementById('add-project-btn').addEventListener('click', async () => {
         const name=document.getElementById('new-project-name').value.trim();
         if(!name)return;
         const start_date=document.getElementById('new-project-start').value;
         const end_date=document.getElementById('new-project-end').value;
+        const company_id=document.getElementById('new-project-company').value || null;
         try {
-            const newProj = await api.createProject({ name, status: 'lead', start_date, end_date });
+            const newProj = await api.createProject({ name, status: 'lead', start_date, end_date, company_id });
             state.projects.push(newProj);
             state.currentProjectId = newProj.id;
             if(window.logActivity) window.logActivity('Proyecto Creado', name);
@@ -642,10 +662,189 @@ window.startGestorApp = async function startGestorApp() {
             document.getElementById('new-project-name').value='';
             document.getElementById('new-project-start').value='';
             document.getElementById('new-project-end').value='';
+            document.getElementById('new-project-company').value='';
             renderProjectsList();
             if (navLinks.pipeline.classList.contains('active')) renderPipeline();
             if(navLinks.dashboard.classList.contains('active'))renderDashboard();
         } catch(e){ alert('Error al crear proyecto: '+e.message); }
+    });
+
+    // ---- EMPRESAS ----
+    // Un cliente/empresa activa, con los proyectos que se le asignaron
+    // (project.company_id), su propia proyección de ingresos y un log de
+    // actividad manual (llamadas, propuestas, seguimiento) que vive dentro
+    // del propio registro de la empresa (columna activity_log, JSON) en vez
+    // de mezclarse con el feed global de Actividad.
+    let currentCompanyFilter = 'all';
+    window.setCompanyFilter = function(btn, filterType) {
+        document.querySelectorAll('#company-filters .filter-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        currentCompanyFilter = filterType;
+        renderCompaniesList();
+    };
+
+    function companyActivityEntries(company) {
+        try {
+            const parsed = JSON.parse(company.activity_log || '[]');
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+
+    function renderCompaniesList() {
+        const list = document.getElementById('company-list');
+        if (!list) return;
+        list.innerHTML = '';
+        const companies = state.companies.filter(c => currentCompanyFilter === 'all' || c.status === currentCompanyFilter);
+        companies.forEach(c => {
+            const linkedProjects = state.projects.filter(p => String(p.company_id) === String(c.id));
+            const isActive = c.status !== 'inactive';
+            const amount = parseFloat(c.projected_amount) || 0;
+            const el = document.createElement('div'); el.className = 'col';
+            el.innerHTML = `<div class="project-card" onclick="openCompanyDetail('${c.id}')">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                    <div style="width:42px;height:42px;border-radius:12px;background:var(--main-bg);color:var(--sidebar-active);display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21h18M6 21V5a1 1 0 011-1h10a1 1 0 011 1v16M9 9h1m4 0h1m-6 4h1m4 0h1m-6 4h1m4 0h1"></path></svg></div>
+                    <span class="metric-badge" style="background:${isActive ? 'rgba(63, 125, 88,0.12)' : 'rgba(107, 114, 128,0.12)'};color:${isActive ? '#3f7d58' : 'var(--text-muted)'};font-size:0.75rem;">${isActive ? 'Activa' : 'Inactiva'}</span>
+                </div>
+                <h5 style="color:var(--text-main);font-weight:600;margin-bottom:0.2rem;">${escapeHtml(c.name)}</h5>
+                <p class="text-muted small m-0">${linkedProjects.length} proyecto${linkedProjects.length === 1 ? '' : 's'} vinculado${linkedProjects.length === 1 ? '' : 's'}</p>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:0.8rem;padding-top:0.8rem;border-top:1px solid var(--border-color);">
+                    <span class="text-muted small">Proyección</span>
+                    <span style="font-family:var(--font-mono);font-weight:600;color:var(--sidebar-active);">${formatMoney(amount)}</span>
+                </div>
+            </div>`;
+            list.appendChild(el);
+        });
+        if (companies.length === 0) {
+            list.innerHTML = '<p class="text-muted small">No hay empresas registradas todavía.</p>';
+        }
+    }
+
+    const companyModal = new bootstrap.Modal(document.getElementById('companyModal'));
+    function renderCompanyLinkedProjects(companyId) {
+        const container = document.getElementById('company-linked-projects');
+        const linked = state.projects.filter(p => String(p.company_id) === String(companyId));
+        if (!linked.length) {
+            container.innerHTML = '<p class="text-muted small mb-0">Todavía no tiene proyectos asignados.</p>';
+            return;
+        }
+        container.innerHTML = linked.map(p => {
+            const done = p.tasks.filter(t => t.status === 'done').length;
+            const pct = p.tasks.length ? Math.round((done / p.tasks.length) * 100) : 0;
+            return `<div class="d-flex justify-content-between align-items-center" style="padding:0.5rem 0;border-bottom:1px solid var(--border-color);">
+                <span class="small">${escapeHtml(p.name)}</span>
+                <span class="small text-muted">${pct}% · ${p.tasks.length} tareas</span>
+            </div>`;
+        }).join('');
+    }
+
+    function renderCompanyActivityList(entries) {
+        const container = document.getElementById('company-activity-list');
+        if (!entries.length) {
+            container.innerHTML = '<p class="text-muted small mb-0">Sin actividad registrada todavía.</p>';
+            return;
+        }
+        container.innerHTML = entries.slice().reverse().map(entry => {
+            const dateStr = entry.date ? new Date(entry.date).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '';
+            return `<div class="d-flex justify-content-between align-items-start" style="padding:0.5rem 0;border-bottom:1px solid var(--border-color);gap:0.75rem;">
+                <div><div class="small">${escapeHtml(entry.text)}</div><small class="text-muted">${dateStr}</small></div>
+                <button class="btn-action-icon btn-action-delete" style="padding:2px;flex-shrink:0;" onclick="removeCompanyActivity('${entry.id}')" title="Eliminar">${ICON_TRASH}</button>
+            </div>`;
+        }).join('');
+    }
+
+    let companyActivityDraft = [];
+
+    window.openNewCompanyModal = function() {
+        document.getElementById('company-modal-title').textContent = 'Nueva Empresa';
+        document.getElementById('company-id-input').value = '';
+        document.getElementById('company-name-input').value = '';
+        document.getElementById('company-status-input').value = 'active';
+        document.getElementById('company-projected-amount-input').value = '';
+        document.getElementById('company-projected-notes-input').value = '';
+        document.getElementById('company-projects-section').style.display = 'none';
+        document.getElementById('company-activity-section').style.display = 'none';
+        document.getElementById('delete-company-btn').style.display = 'none';
+        companyActivityDraft = [];
+        companyModal.show();
+    };
+
+    window.openCompanyDetail = function(id) {
+        const c = state.companies.find(x => String(x.id) === String(id));
+        if (!c) return;
+        document.getElementById('company-modal-title').textContent = c.name;
+        document.getElementById('company-id-input').value = c.id;
+        document.getElementById('company-name-input').value = c.name;
+        document.getElementById('company-status-input').value = c.status || 'active';
+        document.getElementById('company-projected-amount-input').value = c.projected_amount || '';
+        document.getElementById('company-projected-notes-input').value = c.projected_notes || '';
+        document.getElementById('company-projects-section').style.display = 'block';
+        document.getElementById('company-activity-section').style.display = 'block';
+        document.getElementById('delete-company-btn').style.display = 'inline-block';
+        renderCompanyLinkedProjects(c.id);
+        companyActivityDraft = companyActivityEntries(c);
+        renderCompanyActivityList(companyActivityDraft);
+        companyModal.show();
+    };
+    // Alias: mismo modal sirve para ver detalle y editar.
+    window.editCompany = window.openCompanyDetail;
+
+    document.getElementById('company-add-activity-btn').addEventListener('click', () => {
+        const input = document.getElementById('company-activity-input');
+        const text = input.value.trim();
+        if (!text) return;
+        companyActivityDraft.push({ id: `${Date.now()}${Math.random().toString(36).slice(2, 6)}`, text, date: new Date().toISOString() });
+        input.value = '';
+        renderCompanyActivityList(companyActivityDraft);
+    });
+
+    window.removeCompanyActivity = function(activityId) {
+        companyActivityDraft = companyActivityDraft.filter(e => e.id !== activityId);
+        renderCompanyActivityList(companyActivityDraft);
+    };
+
+    document.getElementById('save-company-btn').addEventListener('click', async () => {
+        const id = document.getElementById('company-id-input').value;
+        const name = document.getElementById('company-name-input').value.trim();
+        if (!name) return;
+        const payload = {
+            name,
+            status: document.getElementById('company-status-input').value,
+            projected_amount: document.getElementById('company-projected-amount-input').value || 0,
+            projected_notes: document.getElementById('company-projected-notes-input').value.trim(),
+            activity_log: JSON.stringify(companyActivityDraft),
+        };
+        try {
+            if (id) {
+                await api.updateCompany(id, payload);
+                const idx = state.companies.findIndex(c => String(c.id) === String(id));
+                if (idx !== -1) state.companies[idx] = { ...state.companies[idx], ...payload, id };
+                if (window.logActivity) window.logActivity('Empresa Actualizada', name);
+            } else {
+                const newCompany = await api.createCompany(payload);
+                state.companies.push(newCompany);
+                if (window.logActivity) window.logActivity('Empresa Creada', name);
+            }
+            companyModal.hide();
+            renderCompaniesList();
+        } catch (e) { alert('Error al guardar la empresa: ' + e.message); }
+    });
+
+    document.getElementById('delete-company-btn').addEventListener('click', async () => {
+        const id = document.getElementById('company-id-input').value;
+        if (!id) return;
+        const c = state.companies.find(x => String(x.id) === String(id));
+        if (!confirm('¿Eliminar esta empresa? Sus proyectos no se borran, solo quedan sin empresa asignada.')) return;
+        try {
+            await api.deleteCompany(id);
+            state.companies = state.companies.filter(x => String(x.id) !== String(id));
+            state.projects.forEach(p => { if (String(p.company_id) === String(id)) p.company_id = null; });
+            if (c && window.logActivity) window.logActivity('Empresa Eliminada', c.name);
+            companyModal.hide();
+            renderCompaniesList();
+            if (navLinks.projects.classList.contains('active')) renderProjectsList();
+        } catch (e) { alert('Error al eliminar la empresa: ' + e.message); }
     });
 
     // ---- TABLERO KANBAN ----
@@ -1776,6 +1975,7 @@ function renderNoteFolderTabs() {
     // ---- NAVEGACIÓN ----
     navLinks.dashboard.addEventListener('click',()=>{ showView('dashboard','Performance Overview','Resumen de datos'); renderDashboard(); });
     navLinks.projects.addEventListener('click',()=>{ showView('projects','Proyectos','Tus carpetas de trabajo'); renderProjectsList(); });
+    navLinks.companies.addEventListener('click',()=>{ showView('companies','Empresas','Clientes activos, proyección y actividad'); renderCompaniesList(); });
     navLinks.board.addEventListener('click',()=>{ showView('board','Mis Tareas','Todas tus tareas, de todos tus proyectos'); renderGlobalBoard(); });
     navLinks.calendar.addEventListener('click',()=>{ showView('calendar','Calendario','Vista de tareas por fecha'); renderCalendar(); });
     navLinks.finances.addEventListener('click',()=>{ showView('finances','Finanzas','Control de ingresos y gastos'); renderFinances(); });

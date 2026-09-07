@@ -74,6 +74,37 @@ const api = {
         return res.json();
     },
 
+    // ---- COMPANIES ----
+    async getCompanies() {
+        const res = await apiFetch(`${API_URL}/companies`);
+        if (!res.ok) throw new Error('Error cargando empresas');
+        return res.json();
+    },
+    async createCompany(data) {
+        const id = genId();
+        const res = await apiFetch(`${API_URL}/companies`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...data, id: String(id) })
+        });
+        if (!res.ok) throw new Error('Error creando empresa');
+        return { ...data, id: String(id) };
+    },
+    async updateCompany(id, data) {
+        const res = await apiFetch(`${API_URL}/companies/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error('Error actualizando empresa');
+        return res.json();
+    },
+    async deleteCompany(id) {
+        const res = await apiFetch(`${API_URL}/companies/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Error eliminando empresa');
+        return res.json();
+    },
+
     // ---- TASKS ----
     async createTask(projectId, taskData) {
         const id = genId();

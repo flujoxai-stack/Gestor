@@ -12,6 +12,16 @@ const idLike = z.union([z.string(), z.number()]).transform(String);
 const dateLike = z.string().trim().max(40).optional().default('');
 const hexColor = z.string().trim().regex(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/, 'Color inválido (usa formato hex, ej. #6e48c1)');
 
+// Se usa tanto en projectSchema como al filtrar/eliminar por empresa: no
+// requerido (así una actualización que no lo menciona -- p. ej. guardar
+// solo la garantía -- no lo borra sin querer), pero si viene, "" o null
+// se normalizan a null en vez de guardarse como string vacío (rompería la
+// referencia a companies.id).
+const companyIdLike = z
+    .union([z.string(), z.number(), z.null()])
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v === '' || v === null ? null : String(v)));
+
 const projectSchema = z.object({
     id: idLike.optional(),
     name: z.string().trim().min(1, 'El nombre del proyecto es requerido').max(200),
@@ -20,6 +30,17 @@ const projectSchema = z.object({
     end_date: dateLike,
     warranty_start: dateLike,
     warranty_end: dateLike,
+    company_id: companyIdLike,
+});
+
+const companySchema = z.object({
+    id: idLike.optional(),
+    name: z.string().trim().min(1, 'El nombre de la empresa es requerido').max(200),
+    status: z.enum(['active', 'inactive']).optional().default('active'),
+    projected_amount: z.coerce.number().finite('La proyección debe ser un número').optional().default(0),
+    projected_notes: z.string().max(2000).optional().default(''),
+    activity_log: z.string().max(50000).optional().default('[]'),
+    created_at: z.string().max(40).optional(),
 });
 
 const taskCreateSchema = z.object({
@@ -121,6 +142,7 @@ const businessEmailWebhookSchema = z.object({
 
 module.exports = {
     projectSchema,
+    companySchema,
     taskCreateSchema,
     taskUpdateSchema,
     financeSchema,

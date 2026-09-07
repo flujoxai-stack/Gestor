@@ -14,6 +14,7 @@ const {
 } = require('./database');
 const {
     projectSchema,
+    companySchema,
     taskCreateSchema,
     taskUpdateSchema,
     financeSchema,
@@ -60,7 +61,7 @@ const N8N_WEBHOOK_SECRET = (process.env.N8N_WEBHOOK_SECRET || '').trim();
 if (AUTH_ALLOWED_EMAILS.length === 0) {
     AUTH_ALLOWED_EMAILS.push(AUTH_FALLBACK_EMAIL);
 }
-const INTEGRATION_DEFAULT_EVENTS = ['project.created', 'project.updated', 'project.deleted', 'task.created', 'task.updated', 'task.deleted', 'finance.created', 'finance.deleted', 'note.created', 'note.updated', 'note.deleted', 'folder.created', 'business.email.received'];
+const INTEGRATION_DEFAULT_EVENTS = ['project.created', 'project.updated', 'project.deleted', 'task.created', 'task.updated', 'task.deleted', 'finance.created', 'finance.deleted', 'note.created', 'note.updated', 'note.deleted', 'folder.created', 'company.created', 'company.updated', 'company.deleted', 'business.email.received'];
 
 // SEC-07: antes cors() sin opciones respondía Access-Control-Allow-Origin: *
 // para toda la API. Esta app la usa una sola persona desde un único
@@ -335,6 +336,7 @@ app.get('/api/state', async (req, res) => {
             }
         };
 
+        const companies = await safeRows(() => selectRows('companies', { order: 'created_at.desc' }), []);
         const projects = await safeRows(() => getProjectsWithTasks(), []);
         const finances = await safeRows(() => selectRows('finances', { order: 'date.desc' }), []);
         const activities = await safeRows(() => selectRows('activities', { order: 'date.desc', limit: 50 }), []);
@@ -364,6 +366,7 @@ app.get('/api/state', async (req, res) => {
         }
 
         res.json({
+            companies,
             projects,
             currentProjectId: projects.length > 0 ? projects[0].id : null,
             finances,
@@ -392,7 +395,7 @@ app.get('/api/projects', async (req, res) => {
 });
 
 app.post('/api/projects', validateBody(projectSchema), async (req, res) => {
-    const { id, name, status, start_date, end_date, warranty_start, warranty_end } = req.body;
+    const { id, name, status, start_date, end_date, warranty_start, warranty_end, company_id } = req.body;
     try {
         const existing = await selectRows('projects', { columns: 'id' });
         const projectRecord = {
@@ -404,6 +407,7 @@ app.post('/api/projects', validateBody(projectSchema), async (req, res) => {
             warranty_start: warranty_start || '',
             warranty_end: warranty_end || '',
             pipeline_order: existing.length,
+            company_id: company_id ?? null,
         };
         await upsertRow(
             'projects',
@@ -418,23 +422,15 @@ app.post('/api/projects', validateBody(projectSchema), async (req, res) => {
 });
 
 app.put('/api/projects/:id', validateBody(projectSchema), async (req, res) => {
-    const { name, status, start_date, end_date, warranty_start, warranty_end } = req.body;
+    const { name, status, start_date, end_date, warranty_start, warranty_end, company_id } = req.body;
     try {
-        const projectRecord = {
-            id: req.params.id,
-            name,
-            status,
-            start_date,
-            end_date,
-            warranty_start,
-            warranty_end,
-        };
-        await updateRows(
-            'projects',
-            { id: req.params.id },
-            { name, status, start_date, end_date, warranty_start, warranty_end }
-        );
-        void emitIntegrationEvent('project.updated', { project: projectRecord, source: 'projects' });
+        const updateData = { name, status, start_date, end_date, warranty_start, warranty_end };
+        // company_id solo se toca si vino explícito en el body -- guardar
+        // solo la garantía (u otro campo parcial) nunca debe desvincular
+        // la empresa del proyecto sin que el usuario lo haya pedido.
+        if (company_id !== undefined) updateData.company_id = company_id;
+        await updateRows('projects', { id: req.params.id }, updateData);
+        void emitIntegrationEvent('project.updated', { project: { id: req.params.id, ...updateData }, source: 'projects' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -446,6 +442,59 @@ app.delete('/api/projects/:id', async (req, res) => {
         await deleteRows('tasks', { project_id: req.params.id });
         await deleteRows('projects', { id: req.params.id });
         void emitIntegrationEvent('project.deleted', { project: { id: req.params.id }, source: 'projects' });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/companies', async (req, res) => {
+    try {
+        const rows = await selectRows('companies', { order: 'created_at.desc' });
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/companies', validateBody(companySchema), async (req, res) => {
+    const { id, name, status, projected_amount, projected_notes, activity_log } = req.body;
+    try {
+        const record = {
+            id,
+            name,
+            status: status || 'active',
+            projected_amount: projected_amount || 0,
+            projected_notes: projected_notes || '',
+            activity_log: activity_log || '[]',
+            created_at: integrationNow(),
+        };
+        await upsertRow('companies', record, 'id');
+        void emitIntegrationEvent('company.created', { company: record, source: 'companies' });
+        res.json({ success: true, id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/companies/:id', validateBody(companySchema), async (req, res) => {
+    const { name, status, projected_amount, projected_notes, activity_log } = req.body;
+    try {
+        const updateData = { name, status, projected_amount, projected_notes, activity_log };
+        await updateRows('companies', { id: req.params.id }, updateData);
+        void emitIntegrationEvent('company.updated', { company: { id: req.params.id, ...updateData }, source: 'companies' });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/companies/:id', async (req, res) => {
+    try {
+        // El FK projects.company_id tiene "on delete set null": los
+        // proyectos de esta empresa no se borran, solo quedan sin empresa.
+        await deleteRows('companies', { id: req.params.id });
+        void emitIntegrationEvent('company.deleted', { company: { id: req.params.id }, source: 'companies' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });

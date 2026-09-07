@@ -1,3 +1,13 @@
+create table if not exists public.companies (
+    id text primary key,
+    name text not null,
+    status text not null default 'active' check (status in ('active', 'inactive')),
+    projected_amount numeric not null default 0,
+    projected_notes text default '',
+    activity_log text not null default '[]',
+    created_at text not null
+);
+
 create table if not exists public.projects (
     id text primary key,
     name text not null,
@@ -6,7 +16,8 @@ create table if not exists public.projects (
     end_date text,
     warranty_start text,
     warranty_end text,
-    pipeline_order integer default 0
+    pipeline_order integer default 0,
+    company_id text references public.companies(id) on delete set null
 );
 
 create table if not exists public.tasks (
@@ -94,6 +105,8 @@ create table if not exists public.business_notifications (
     updated_at text not null
 );
 
+create index if not exists companies_status_idx on public.companies (status);
+create index if not exists projects_company_id_idx on public.projects (company_id);
 create index if not exists tasks_project_id_idx on public.tasks (project_id);
 create index if not exists tasks_status_idx on public.tasks (status);
 create index if not exists finances_date_idx on public.finances (date desc);
@@ -119,6 +132,7 @@ on conflict (name) do nothing;
 -- proyecto que ya tenía las tablas creadas con los permisos antiguos.
 grant usage on schema public to authenticated;
 grant select, insert, update, delete on
+    public.companies,
     public.projects,
     public.tasks,
     public.finances,
@@ -131,6 +145,7 @@ grant select, insert, update, delete on
     public.business_notifications
 to authenticated;
 
+alter table public.companies enable row level security;
 alter table public.projects enable row level security;
 alter table public.tasks enable row level security;
 alter table public.finances enable row level security;
@@ -142,6 +157,7 @@ alter table public.integrations enable row level security;
 alter table public.integration_events enable row level security;
 alter table public.business_notifications enable row level security;
 
+create policy "authenticated_full_access" on public.companies for all to authenticated using (true) with check (true);
 create policy "authenticated_full_access" on public.projects for all to authenticated using (true) with check (true);
 create policy "authenticated_full_access" on public.tasks for all to authenticated using (true) with check (true);
 create policy "authenticated_full_access" on public.finances for all to authenticated using (true) with check (true);
