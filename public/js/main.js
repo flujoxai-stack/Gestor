@@ -1975,7 +1975,7 @@ function renderNoteFolderTabs() {
     // ---- NAVEGACIÓN ----
     navLinks.dashboard.addEventListener('click',()=>{ showView('dashboard','Performance Overview','Resumen de datos'); renderDashboard(); });
     navLinks.projects.addEventListener('click',()=>{ showView('projects','Proyectos','Tus carpetas de trabajo'); renderProjectsList(); });
-    navLinks.companies.addEventListener('click',()=>{ showView('companies','Empresas','Clientes activos, proyección y actividad'); renderCompaniesList(); });
+    navLinks.companies.addEventListener('click',()=>{ showView('companies','Empresas','Tus empresas, proyección de ingresos y actividad'); renderCompaniesList(); });
     navLinks.board.addEventListener('click',()=>{ showView('board','Mis Tareas','Todas tus tareas, de todos tus proyectos'); renderGlobalBoard(); });
     navLinks.calendar.addEventListener('click',()=>{ showView('calendar','Calendario','Vista de tareas por fecha'); renderCalendar(); });
     navLinks.finances.addEventListener('click',()=>{ showView('finances','Finanzas','Control de ingresos y gastos'); renderFinances(); });
