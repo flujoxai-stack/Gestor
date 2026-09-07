@@ -1808,6 +1808,7 @@ function renderNoteFolderTabs() {
     navLinks.activity.addEventListener('click',()=>{ showView('activity','Actividad','Registro de actividades recientes'); renderActivityFeed(); });
     navLinks.pipeline.addEventListener('click',()=>{ showView('pipeline','Pipeline','Flujo de proyectos'); renderPipeline(); });
     navLinks.notes.addEventListener('click',()=>{ showView('notes','Notas','Tus notas y apuntes'); renderNoteFolderTabs(); renderNotesList(); });
+    document.getElementById('notes-search-input')?.addEventListener('input', renderNotesList);
     navLinks.businessMail.addEventListener('click',()=>{ showView('businessMail','Correo Negocio','Solo mensajes filtrados por n8n y Gmail'); renderBusinessMail(); });
     navLinks.integrations.addEventListener('click',()=>{ showView('integrations','Integraciones','Conecta el CRM con otras herramientas'); renderIntegrations(); });
 
