@@ -1029,10 +1029,11 @@ window.startGestorApp = async function startGestorApp() {
         const id=document.getElementById('task-id-input').value;
         if(!id)return;
         if(confirm('¿Eliminar esta tarea?')){
-            const { project: p } = findTaskAndProject(id);
+            const { project: p, task: t } = findTaskAndProject(id);
             try {
                 await api.deleteTask(id);
-                if(p) p.tasks=p.tasks.filter(t=>t.id!==id);
+                if(p) p.tasks=p.tasks.filter(x=>x.id!==id);
+                if(t&&window.logActivity)window.logActivity('Tarea Eliminada', t.title);
                 bootstrap.Modal.getInstance(document.getElementById('taskDetailModal')).hide();
                 refreshBoardView();
                 if(navLinks.calendar.classList.contains('active'))renderCalendar();
@@ -1057,10 +1058,11 @@ window.startGestorApp = async function startGestorApp() {
     window.deleteTaskDirectly = async function(id, event) {
         if(event)event.stopPropagation();
         if(confirm('¿Eliminar esta tarea?')){
-            const { project: p } = findTaskAndProject(id);
+            const { project: p, task: t } = findTaskAndProject(id);
             try {
                 await api.deleteTask(id);
-                if(p)p.tasks=p.tasks.filter(t=>t.id!==id);
+                if(p)p.tasks=p.tasks.filter(x=>x.id!==id);
+                if(t&&window.logActivity)window.logActivity('Tarea Eliminada', t.title);
                 refreshBoardView();
                 if(navLinks.dashboard.classList.contains('active'))renderDashboard();
             } catch(e){ alert('Error al eliminar tarea: '+e.message); }
@@ -1293,9 +1295,11 @@ window.startGestorApp = async function startGestorApp() {
     document.getElementById('delete-finance-btn').addEventListener('click', async () => {
         const id = document.getElementById('fin-id-input').value;
         if (!id || !confirm('¿Eliminar este movimiento?')) return;
+        const f = state.finances.find((x) => x.id === id);
         try {
             await api.deleteFinance(id);
-            state.finances = state.finances.filter((f) => f.id !== id);
+            state.finances = state.finances.filter((x) => x.id !== id);
+            if (f && window.logActivity) window.logActivity('Movimiento Eliminado', f.concept);
             addFinanceModal.hide();
             renderFinances();
             if(navLinks.dashboard.classList.contains('active'))renderDashboard();
@@ -1304,10 +1308,12 @@ window.startGestorApp = async function startGestorApp() {
     });
 
     window.deleteFinance=async function(id){
+        const f=state.finances.find(x=>x.id===id);
         if(confirm('¿Eliminar este movimiento?')){
             try {
                 await api.deleteFinance(id);
-                state.finances=state.finances.filter(f=>f.id!==id);
+                state.finances=state.finances.filter(x=>x.id!==id);
+                if(f&&window.logActivity)window.logActivity('Movimiento Eliminado', f.concept);
                 renderFinances();
                 if(navLinks.dashboard.classList.contains('active'))renderDashboard();
                 if(navLinks.pipeline.classList.contains('active'))renderPipeline();
@@ -1523,6 +1529,7 @@ function renderNoteFolderTabs() {
                 await api.updateNote(id,noteData);
                 const n=state.notes.find(x=>x.id===id);
                 if(n)Object.assign(n,noteData);
+                if(window.logActivity)window.logActivity('Nota Actualizada', noteData.title);
             } else {
                 const newNote=await api.createNote(noteData);
                 state.notes.unshift(newNote);
@@ -1535,10 +1542,12 @@ function renderNoteFolderTabs() {
 
     window.deleteNote=async function(id,event){
         if(event)event.stopPropagation();
+        const n=state.notes.find(x=>x.id===id);
         if(confirm('¿Eliminar esta nota?')){
             try {
                 await api.deleteNote(id);
-                state.notes=state.notes.filter(n=>n.id!==id);
+                state.notes=state.notes.filter(x=>x.id!==id);
+                if(n&&window.logActivity)window.logActivity('Nota Eliminada', n.title);
                 renderNotesList();
             } catch(e){ alert('Error al eliminar nota: '+e.message); }
         }
@@ -1555,6 +1564,7 @@ function renderNoteFolderTabs() {
                 state.noteFolders.push(normalizedName);
                 state.noteFolderColors[normalizedName] = color;
                 await api.saveSetting('noteFolderColors', JSON.stringify(state.noteFolderColors));
+                if(window.logActivity)window.logActivity('Carpeta Creada', normalizedName);
                 renderNoteFolderTabs();
             } catch(e){ alert('Error al crear carpeta: '+e.message); }
         }
@@ -1683,6 +1693,7 @@ function renderNoteFolderTabs() {
                             await api.deleteIntegration(integration.id);
                             await refreshIntegrationsState();
                             renderIntegrations();
+                            if (window.logActivity) window.logActivity('Integración Eliminada', integration.name);
                         } catch (err) {
                             alert('Error al eliminar integración: ' + err.message);
                         }
@@ -1759,8 +1770,10 @@ function renderNoteFolderTabs() {
         try {
             if (currentIntegrationId) {
                 await api.updateIntegration(currentIntegrationId, payload);
+                if (window.logActivity) window.logActivity('Integración Actualizada', payload.name);
             } else {
                 await api.createIntegration(payload);
+                if (window.logActivity) window.logActivity('Integración Creada', payload.name);
             }
             await refreshIntegrationsState();
             renderIntegrations();
@@ -1886,9 +1899,11 @@ function renderNoteFolderTabs() {
             tr.querySelector('[data-action="view"]').addEventListener('click', () => openBusinessMailModal(mail));
             tr.querySelector('[data-action="toggle"]').addEventListener('click', async () => {
                 try {
-                    await api.updateBusinessNotification(mail.id, { is_read: !mail.is_read });
+                    const nowRead = !mail.is_read;
+                    await api.updateBusinessNotification(mail.id, { is_read: nowRead });
                     await refreshBusinessMailState();
                     renderBusinessMail();
+                    showToast(nowRead ? 'Correo marcado como leído' : 'Correo marcado como no leído');
                 } catch (err) {
                     alert('Error al actualizar correo: ' + err.message);
                 }
