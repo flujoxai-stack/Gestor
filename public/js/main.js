@@ -605,7 +605,7 @@ window.startGestorApp = async function startGestorApp() {
                 ? `<span class="metric-badge" style="background:rgba(31, 111, 120,0.1);color:var(--sidebar-active);font-size:0.72rem;margin-bottom:0.4rem;display:inline-block;">${escapeHtml(company.name)}</span><br>`
                 : '';
             const el=document.createElement('div'); el.className='col';
-            el.innerHTML=`<div class="project-card" onclick="openProject('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div style="width:42px;height:42px;border-radius:12px;background:var(--main-bg);color:var(--sidebar-active);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg></div><div style="display:flex;align-items:center;gap:8px;"><span class="metric-badge" style="background:var(--main-bg);color:var(--text-muted);font-size:0.75rem;">${progress}%</span><button class="btn-action-icon" style="padding:4px;${hasWarranty ? 'color:#3f7d58;' : ''}" onclick="openEditWarranty('${p.id}',event)" title="${hasWarranty ? 'Garantía asignada' : 'Asignar garantía'}"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg></button><button class="btn-action-icon btn-action-delete" style="padding:4px;" onclick="deleteProject('${p.id}',event)" title="Eliminar Proyecto">${ICON_TRASH}</button></div></div>${companyTagHtml}<h5 style="color:var(--text-main);font-weight:600;margin-bottom:0.2rem;">${escapeHtml(p.name)}</h5><p class="text-muted small m-0">${p.tasks.length} Tareas</p>${datesHtml}<div style="width:100%;background-color:var(--border-color);height:6px;border-radius:4px;margin-top:1rem;overflow:hidden;"><div style="width:${progress}%;background-color:${progress===100?'#3f7d58':'var(--sidebar-active)'};height:100%;transition:width 0.3s ease;"></div></div></div>`;
+            el.innerHTML=`<div class="project-card" onclick="openProject('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><div style="width:42px;height:42px;border-radius:12px;background:var(--main-bg);color:var(--sidebar-active);display:flex;align-items:center;justify-content:center;"><svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg></div><div style="display:flex;align-items:center;gap:8px;"><span class="metric-badge" style="background:var(--main-bg);color:var(--text-muted);font-size:0.75rem;">${progress}%</span><button class="btn-action-icon" style="padding:4px;${company ? 'color:var(--sidebar-active);' : ''}" onclick="openAssignCompany('${p.id}',event)" title="${company ? 'Empresa: ' + escapeHtml(company.name) : 'Asignar empresa'}"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21h18M6 21V5a1 1 0 011-1h10a1 1 0 011 1v16M9 9h1m4 0h1m-6 4h1m4 0h1m-6 4h1m4 0h1"></path></svg></button><button class="btn-action-icon" style="padding:4px;${hasWarranty ? 'color:#3f7d58;' : ''}" onclick="openEditWarranty('${p.id}',event)" title="${hasWarranty ? 'Garantía asignada' : 'Asignar garantía'}"><svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg></button><button class="btn-action-icon btn-action-delete" style="padding:4px;" onclick="deleteProject('${p.id}',event)" title="Eliminar Proyecto">${ICON_TRASH}</button></div></div>${companyTagHtml}<h5 style="color:var(--text-main);font-weight:600;margin-bottom:0.2rem;">${escapeHtml(p.name)}</h5><p class="text-muted small m-0">${p.tasks.length} Tareas</p>${datesHtml}<div style="width:100%;background-color:var(--border-color);height:6px;border-radius:4px;margin-top:1rem;overflow:hidden;"><div style="width:${progress}%;background-color:${progress===100?'#3f7d58':'var(--sidebar-active)'};height:100%;transition:width 0.3s ease;"></div></div></div>`;
             list.appendChild(el);
         });
     }
@@ -1129,6 +1129,43 @@ window.startGestorApp = async function startGestorApp() {
                 renderProjectsList();
             } catch(e){ alert('Error actualizando garantía: '+e.message); }
         }
+    });
+
+    // Asignar empresa a un proyecto ya existente (creado antes de que
+    // existiera la sección Empresas, o simplemente sin asignar todavía) --
+    // el modal de "Nuevo Proyecto" solo cubre proyectos nuevos.
+    const assignCompanyModal = new bootstrap.Modal(document.getElementById('assignCompanyModal'));
+    window.openAssignCompany = function(id, event) {
+        if (event) event.stopPropagation();
+        const p = state.projects.find(x => String(x.id) === String(id));
+        if (!p) return;
+        document.getElementById('assign-company-project-id').value = id;
+        const sel = document.getElementById('assign-company-select');
+        sel.innerHTML = '<option value="">Sin empresa</option>' +
+            state.companies.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+        sel.value = p.company_id || '';
+        assignCompanyModal.show();
+    };
+    document.getElementById('save-assign-company-btn').addEventListener('click', async () => {
+        const id = document.getElementById('assign-company-project-id').value;
+        const p = state.projects.find(x => String(x.id) === String(id));
+        if (!p) return;
+        const company_id = document.getElementById('assign-company-select').value || null;
+        try {
+            await api.updateProject(id, {
+                name: p.name, status: p.status,
+                start_date: p.start_date || p.startDate || '',
+                end_date: p.end_date || p.endDate || '',
+                warranty_start: p.warranty_start || p.warrantyStart || '',
+                warranty_end: p.warranty_end || p.warrantyEnd || '',
+                company_id,
+            });
+            p.company_id = company_id;
+            if (window.logActivity) window.logActivity('Empresa asignada al proyecto', p.name);
+            assignCompanyModal.hide();
+            renderProjectsList();
+            if (navLinks.companies.classList.contains('active')) renderCompaniesList();
+        } catch (e) { alert('Error asignando empresa: ' + e.message); }
     });
 
     // ---- FINANZAS ----
