@@ -566,30 +566,6 @@ body[data-auth="locked"] {
         .chart-header h3 { font-size: 1.2rem; font-weight: 600; margin: 0; }
         .chart-header p { font-size: 0.8rem; color: var(--text-muted); margin: 0; }
 
-        /* Mismo look que la mini gráfica decorativa del login, en miniatura:
-           un gesto visual coherente entre la puerta de entrada y el
-           Dashboard real. Vive junto a "Estado de Tareas" (no junto a
-           "Progreso por Proyecto", que ya tiene el gráfico grande igual
-           justo debajo y se veía redundante ahí). */
-        .mini-chart-badge {
-            display: flex;
-            align-items: flex-end;
-            gap: 8px;
-            width: 120px;
-            height: 72px;
-            padding: 12px 14px;
-            border-radius: 16px;
-            background: color-mix(in srgb, var(--sidebar-active) 10%, var(--card-bg));
-            border: 1px solid color-mix(in srgb, var(--sidebar-active) 22%, transparent);
-            flex-shrink: 0;
-        }
-        .mini-chart-bar {
-            flex: 1;
-            min-height: 6px;
-            border-radius: 3px 3px 0 0;
-            background: color-mix(in srgb, var(--sidebar-active) 35%, transparent);
-        }
-
         .custom-list { margin-top: 1.5rem; }
         .custom-list-item { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 0; border-bottom: 1px solid var(--border-color); }
         .custom-list-item:last-child { border-bottom: none; }
