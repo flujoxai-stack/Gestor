@@ -120,7 +120,7 @@ window.logActivity = async function(title, desc) {
 };
 
 function renderActivityFeed() {
-    const feed = document.getElementById('activity-feed');
+    const feed = document.getElementById('activity-timeline');
     if (!feed) return;
     feed.innerHTML = '';
     state.activities.slice(0, 20).forEach(a => {
