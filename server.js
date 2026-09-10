@@ -78,9 +78,15 @@ const DEFAULT_NOTE_FOLDERS = ['General', 'APIs', 'Contraseñas'];
 
 // SEC-07: antes cors() sin opciones respondía Access-Control-Allow-Origin: *
 // para toda la API. Esta app la usan pocas personas autorizadas desde un
-// único dominio, así que se restringe a ese origen (+ localhost en desarrollo).
+// puñado de dominios propios, así que se restringe a esos (+ localhost en
+// desarrollo). BUG encontrado: faltaba el dominio propio gestor.flujoxai.com
+// en esta lista -- cualquier POST/PUT/DELETE real desde el navegador en ese
+// dominio (login incluido) mandaba el header Origin, no coincidía con nada
+// de la lista, y el callback(new Error(...)) de abajo tumbaba el servidor
+// entero con un 500 crudo en vez de solo rechazar esa petición.
 const ALLOWED_ORIGINS = [
     'https://gestor-flame.vercel.app',
+    'https://gestor.flujoxai.com',
     ...(process.env.EXTRA_ALLOWED_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean),
 ];
 app.use(cors({
@@ -89,7 +95,11 @@ app.use(cors({
         if (!origin || /^https?:\/\/localhost(:\d+)?$/.test(origin) || ALLOWED_ORIGINS.includes(origin)) {
             return callback(null, true);
         }
-        return callback(new Error('Origen no permitido por CORS'));
+        // callback(null, false) en vez de callback(new Error(...)): un origen
+        // no reconocido simplemente no recibe los headers CORS (el navegador
+        // bloquea la respuesta del lado del cliente), en vez de tumbar el
+        // servidor completo con una excepción sin capturar.
+        return callback(null, false);
     },
 }));
 app.use(express.json());
