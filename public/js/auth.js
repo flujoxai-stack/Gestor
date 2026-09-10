@@ -1,4 +1,3 @@
-const ALLOWED_EMAIL = 'flujoxai@gmail.com';
 const SESSION_KEY = 'gestor_auth_session';
 
 const authScreen = document.getElementById('auth-screen');
@@ -36,6 +35,10 @@ function saveSession(session) {
     }
 }
 
+// El correo permitido lo decide el servidor (variable de entorno
+// AUTH_ALLOWED_EMAILS), no este archivo -- así el repo público nunca
+// expone en el código quiénes tienen acceso. /api/auth/me ya responde
+// 403 si el correo de la sesión no está en esa lista.
 async function validateSession(session) {
     if (!session?.access_token) return false;
 
@@ -45,14 +48,7 @@ async function validateSession(session) {
         },
     });
 
-    if (!res.ok) return false;
-
-    const data = await res.json();
-    const email = String(data?.user?.email || '').toLowerCase();
-
-    if (email !== ALLOWED_EMAIL) return false;
-
-    return true;
+    return res.ok;
 }
 
 async function applySession(session) {
@@ -95,11 +91,6 @@ loginForm?.addEventListener('submit', async (event) => {
 
     const email = String(document.getElementById('login-email').value || '').trim().toLowerCase();
     const password = String(document.getElementById('login-password').value || '');
-
-    if (email !== ALLOWED_EMAIL) {
-        setMessage('Acceso denegado. Solo puede entrar flujoxai@gmail.com.', 'error');
-        return;
-    }
 
     loginBtn.disabled = true;
     setMessage('Validando credenciales...', 'info');
