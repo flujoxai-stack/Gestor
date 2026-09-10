@@ -58,14 +58,22 @@ const AUTH_ALLOWED_EMAILS = (process.env.AUTH_ALLOWED_EMAILS || '')
     .filter(Boolean);
 const AUTH_FALLBACK_EMAIL = 'flujoxai@gmail.com';
 const N8N_WEBHOOK_SECRET = (process.env.N8N_WEBHOOK_SECRET || '').trim();
+// MULTI-01: el webhook de n8n no tiene un usuario logueado detrás (lo llama
+// n8n directamente con un secreto compartido), así que no hay forma de
+// deducir de quién es el correo entrante. Como solo el dueño principal
+// tiene su Gmail conectado a ese flujo, se le asigna a este ID fijo -- el
+// UUID de auth.users del dueño (Authentication > Users en Supabase, o
+// "select id from auth.users where email = '...'" en el SQL Editor).
+const N8N_WEBHOOK_OWNER_ID = (process.env.N8N_WEBHOOK_OWNER_ID || '').trim();
 if (AUTH_ALLOWED_EMAILS.length === 0) {
     AUTH_ALLOWED_EMAILS.push(AUTH_FALLBACK_EMAIL);
 }
 const INTEGRATION_DEFAULT_EVENTS = ['project.created', 'project.updated', 'project.deleted', 'task.created', 'task.updated', 'task.deleted', 'finance.created', 'finance.deleted', 'note.created', 'note.updated', 'note.deleted', 'folder.created', 'company.created', 'company.updated', 'company.deleted', 'business.email.received'];
+const DEFAULT_NOTE_FOLDERS = ['General', 'APIs', 'Contraseñas'];
 
 // SEC-07: antes cors() sin opciones respondía Access-Control-Allow-Origin: *
-// para toda la API. Esta app la usa una sola persona desde un único
-// dominio, así que se restringe a ese origen (+ localhost en desarrollo).
+// para toda la API. Esta app la usan pocas personas autorizadas desde un
+// único dominio, así que se restringe a ese origen (+ localhost en desarrollo).
 const ALLOWED_ORIGINS = [
     'https://gestor-flame.vercel.app',
     ...(process.env.EXTRA_ALLOWED_ORIGINS || '').split(',').map((o) => o.trim()).filter(Boolean),
@@ -112,7 +120,11 @@ async function requireAuth(req, res, next) {
             return res.status(403).json({ error: 'Forbidden' });
         }
 
+        // MULTI-01: cada usuario autorizado ve solo lo suyo. req.user.id es
+        // el UUID real de Supabase Auth -- toda ruta de abajo filtra por
+        // este valor, nunca por uno que venga del body/query del cliente.
         req.user = user;
+        req.ownerId = user.id;
         return next();
     } catch (err) {
         console.error('Auth middleware error:', err);
@@ -180,9 +192,9 @@ app.get('/api/auth/me', async (req, res) => {
     }
 });
 
-async function getProjectsWithTasks() {
-    const projects = await selectRows('projects', { order: 'pipeline_order.asc' });
-    const tasks = await selectRows('tasks');
+async function getProjectsWithTasks(ownerId) {
+    const projects = await selectRows('projects', { filters: { owner_id: ownerId }, order: 'pipeline_order.asc' });
+    const tasks = await selectRows('tasks', { filters: { owner_id: ownerId } });
     return projects.map((project) => ({
         ...project,
         tasks: tasks
@@ -192,6 +204,16 @@ async function getProjectsWithTasks() {
                 dueDate: task.due_date,
             })),
     }));
+}
+
+// MULTI-01: antes de crear una tarea o un movimiento financiero atado a un
+// project_id, hay que confirmar que ese proyecto es del mismo dueño --
+// si no, cualquier usuario autorizado podría "adivinar" el id de un
+// proyecto ajeno y colgarle tareas o gastos.
+async function assertProjectOwnership(projectId, ownerId) {
+    if (!projectId) return true;
+    const project = await selectOneRow('projects', { filters: { id: projectId, owner_id: ownerId }, columns: 'id' });
+    return !!project;
 }
 
 function parseJson(value, fallback = {}) {
@@ -228,8 +250,8 @@ function normalizeIntegration(row) {
     };
 }
 
-async function getIntegrations() {
-    const rows = await selectRows('integrations', { order: 'updated_at.desc' });
+async function getIntegrations(ownerId) {
+    const rows = await selectRows('integrations', { filters: { owner_id: ownerId }, order: 'updated_at.desc' });
     return rows.map(normalizeIntegration);
 }
 
@@ -242,8 +264,8 @@ function normalizeBusinessNotification(row) {
     };
 }
 
-async function getBusinessNotifications(limit = 50) {
-    const rows = await selectRows('business_notifications', { order: 'received_at.desc', limit });
+async function getBusinessNotifications(ownerId, limit = 50) {
+    const rows = await selectRows('business_notifications', { filters: { owner_id: ownerId }, order: 'received_at.desc', limit });
     return rows.map(normalizeBusinessNotification);
 }
 
@@ -260,10 +282,10 @@ async function logIntegrationEvent(data) {
     }
 }
 
-async function emitIntegrationEvent(eventType, payload, meta = {}) {
+async function emitIntegrationEvent(ownerId, eventType, payload, meta = {}) {
     let integrations = [];
     try {
-        integrations = await getIntegrations();
+        integrations = await getIntegrations(ownerId);
     } catch (err) {
         console.error('Error loading integrations:', err);
         return;
@@ -314,6 +336,7 @@ async function emitIntegrationEvent(eventType, payload, meta = {}) {
                 }
                 await logIntegrationEvent({
                     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                    owner_id: ownerId,
                     integration_id: String(integration.id),
                     event_type: eventType,
                     payload: rawBody,
@@ -325,8 +348,23 @@ async function emitIntegrationEvent(eventType, payload, meta = {}) {
     );
 }
 
+// MULTI-01: la primera vez que un usuario nuevo (recién invitado) entra al
+// CRM todavía no tiene carpetas de notas -- antes eran filas globales
+// sembradas una sola vez en toda la base de datos; ahora cada usuario
+// necesita las suyas la primera vez que carga /api/state.
+async function ensureDefaultFolders(ownerId) {
+    const existing = await selectRows('note_folders', { filters: { owner_id: ownerId }, columns: 'name' });
+    if (existing.length > 0) return existing.map((f) => f.name);
+
+    for (const name of DEFAULT_NOTE_FOLDERS) {
+        await upsertRow('note_folders', { owner_id: ownerId, name }, 'owner_id,name');
+    }
+    return DEFAULT_NOTE_FOLDERS.slice();
+}
+
 app.get('/api/state', async (req, res) => {
     try {
+        const ownerId = req.ownerId;
         const safeRows = async (loader, fallback = []) => {
             try {
                 return await loader();
@@ -336,24 +374,24 @@ app.get('/api/state', async (req, res) => {
             }
         };
 
-        const companies = await safeRows(() => selectRows('companies', { order: 'created_at.desc' }), []);
-        const projects = await safeRows(() => getProjectsWithTasks(), []);
-        const finances = await safeRows(() => selectRows('finances', { order: 'date.desc' }), []);
-        const activities = await safeRows(() => selectRows('activities', { order: 'date.desc', limit: 50 }), []);
-        const notes = await safeRows(() => selectRows('notes', { order: 'created_at.desc' }), []);
-        const folders = await safeRows(() => selectRows('note_folders', { columns: 'name' }), []);
+        const companies = await safeRows(() => selectRows('companies', { filters: { owner_id: ownerId }, order: 'created_at.desc' }), []);
+        const projects = await safeRows(() => getProjectsWithTasks(ownerId), []);
+        const finances = await safeRows(() => selectRows('finances', { filters: { owner_id: ownerId }, order: 'date.desc' }), []);
+        const activities = await safeRows(() => selectRows('activities', { filters: { owner_id: ownerId }, order: 'date.desc', limit: 50 }), []);
+        const notes = await safeRows(() => selectRows('notes', { filters: { owner_id: ownerId }, order: 'created_at.desc' }), []);
+        const folderNames = await safeRows(() => ensureDefaultFolders(ownerId), DEFAULT_NOTE_FOLDERS.slice());
         const timeSetting = await safeRows(
-            () => selectOneRow('settings', { filters: { key: 'globalTimeSpent' } }),
+            () => selectOneRow('settings', { filters: { owner_id: ownerId, key: 'globalTimeSpent' } }),
             null
         );
         const folderColorsSetting = await safeRows(
-            () => selectOneRow('settings', { filters: { key: 'noteFolderColors' } }),
+            () => selectOneRow('settings', { filters: { owner_id: ownerId, key: 'noteFolderColors' } }),
             null
         );
-        const businessNotifications = await safeRows(() => getBusinessNotifications(50), []);
-        const integrations = await safeRows(() => getIntegrations(), []);
+        const businessNotifications = await safeRows(() => getBusinessNotifications(ownerId, 50), []);
+        const integrations = await safeRows(() => getIntegrations(ownerId), []);
         const integrationEvents = await safeRows(
-            () => selectRows('integration_events', { order: 'created_at.desc', limit: 20 }),
+            () => selectRows('integration_events', { filters: { owner_id: ownerId }, order: 'created_at.desc', limit: 20 }),
             []
         );
         let noteFolderColors = {};
@@ -372,7 +410,7 @@ app.get('/api/state', async (req, res) => {
             finances,
             activities,
             notes,
-            noteFolders: folders.map((f) => f.name),
+            noteFolders: folderNames,
             noteFolderColors,
             integrations,
             integrationEvents,
@@ -387,7 +425,7 @@ app.get('/api/state', async (req, res) => {
 
 app.get('/api/projects', async (req, res) => {
     try {
-        const rows = await selectRows('projects', { order: 'pipeline_order.asc' });
+        const rows = await selectRows('projects', { filters: { owner_id: req.ownerId }, order: 'pipeline_order.asc' });
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -397,9 +435,10 @@ app.get('/api/projects', async (req, res) => {
 app.post('/api/projects', validateBody(projectSchema), async (req, res) => {
     const { id, name, status, start_date, end_date, warranty_start, warranty_end, company_id } = req.body;
     try {
-        const existing = await selectRows('projects', { columns: 'id' });
+        const existing = await selectRows('projects', { filters: { owner_id: req.ownerId }, columns: 'id' });
         const projectRecord = {
             id,
+            owner_id: req.ownerId,
             name,
             status: status || 'lead',
             start_date: start_date || '',
@@ -414,7 +453,7 @@ app.post('/api/projects', validateBody(projectSchema), async (req, res) => {
             projectRecord,
             'id'
         );
-        void emitIntegrationEvent('project.created', { project: projectRecord, source: 'projects' });
+        void emitIntegrationEvent(req.ownerId, 'project.created', { project: projectRecord, source: 'projects' });
         res.json({ success: true, id });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -429,8 +468,8 @@ app.put('/api/projects/:id', validateBody(projectSchema), async (req, res) => {
         // solo la garantía (u otro campo parcial) nunca debe desvincular
         // la empresa del proyecto sin que el usuario lo haya pedido.
         if (company_id !== undefined) updateData.company_id = company_id;
-        await updateRows('projects', { id: req.params.id }, updateData);
-        void emitIntegrationEvent('project.updated', { project: { id: req.params.id, ...updateData }, source: 'projects' });
+        await updateRows('projects', { id: req.params.id, owner_id: req.ownerId }, updateData);
+        void emitIntegrationEvent(req.ownerId, 'project.updated', { project: { id: req.params.id, ...updateData }, source: 'projects' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -439,9 +478,9 @@ app.put('/api/projects/:id', validateBody(projectSchema), async (req, res) => {
 
 app.delete('/api/projects/:id', async (req, res) => {
     try {
-        await deleteRows('tasks', { project_id: req.params.id });
-        await deleteRows('projects', { id: req.params.id });
-        void emitIntegrationEvent('project.deleted', { project: { id: req.params.id }, source: 'projects' });
+        await deleteRows('tasks', { project_id: req.params.id, owner_id: req.ownerId });
+        await deleteRows('projects', { id: req.params.id, owner_id: req.ownerId });
+        void emitIntegrationEvent(req.ownerId, 'project.deleted', { project: { id: req.params.id }, source: 'projects' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -450,7 +489,7 @@ app.delete('/api/projects/:id', async (req, res) => {
 
 app.get('/api/companies', async (req, res) => {
     try {
-        const rows = await selectRows('companies', { order: 'created_at.desc' });
+        const rows = await selectRows('companies', { filters: { owner_id: req.ownerId }, order: 'created_at.desc' });
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -462,6 +501,7 @@ app.post('/api/companies', validateBody(companySchema), async (req, res) => {
     try {
         const record = {
             id,
+            owner_id: req.ownerId,
             name,
             status: status || 'active',
             projected_amount: projected_amount || 0,
@@ -470,7 +510,7 @@ app.post('/api/companies', validateBody(companySchema), async (req, res) => {
             created_at: integrationNow(),
         };
         await upsertRow('companies', record, 'id');
-        void emitIntegrationEvent('company.created', { company: record, source: 'companies' });
+        void emitIntegrationEvent(req.ownerId, 'company.created', { company: record, source: 'companies' });
         res.json({ success: true, id });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -481,8 +521,8 @@ app.put('/api/companies/:id', validateBody(companySchema), async (req, res) => {
     const { name, status, projected_amount, projected_notes, activity_log } = req.body;
     try {
         const updateData = { name, status, projected_amount, projected_notes, activity_log };
-        await updateRows('companies', { id: req.params.id }, updateData);
-        void emitIntegrationEvent('company.updated', { company: { id: req.params.id, ...updateData }, source: 'companies' });
+        await updateRows('companies', { id: req.params.id, owner_id: req.ownerId }, updateData);
+        void emitIntegrationEvent(req.ownerId, 'company.updated', { company: { id: req.params.id, ...updateData }, source: 'companies' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -493,8 +533,8 @@ app.delete('/api/companies/:id', async (req, res) => {
     try {
         // El FK projects.company_id tiene "on delete set null": los
         // proyectos de esta empresa no se borran, solo quedan sin empresa.
-        await deleteRows('companies', { id: req.params.id });
-        void emitIntegrationEvent('company.deleted', { company: { id: req.params.id }, source: 'companies' });
+        await deleteRows('companies', { id: req.params.id, owner_id: req.ownerId });
+        void emitIntegrationEvent(req.ownerId, 'company.deleted', { company: { id: req.params.id }, source: 'companies' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -503,7 +543,7 @@ app.delete('/api/companies/:id', async (req, res) => {
 
 app.get('/api/tasks', async (req, res) => {
     try {
-        const rows = await selectRows('tasks');
+        const rows = await selectRows('tasks', { filters: { owner_id: req.ownerId } });
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -513,8 +553,12 @@ app.get('/api/tasks', async (req, res) => {
 app.post('/api/tasks', validateBody(taskCreateSchema), async (req, res) => {
     const { id, project_id, title, description, status, priority, due_date } = req.body;
     try {
+        if (!(await assertProjectOwnership(project_id, req.ownerId))) {
+            return res.status(404).json({ error: 'Proyecto no encontrado' });
+        }
         const taskRecord = {
             id,
+            owner_id: req.ownerId,
             project_id,
             title,
             description: description || '',
@@ -527,7 +571,7 @@ app.post('/api/tasks', validateBody(taskCreateSchema), async (req, res) => {
             taskRecord,
             'id'
         );
-        void emitIntegrationEvent('task.created', { task: taskRecord, source: 'tasks' });
+        void emitIntegrationEvent(req.ownerId, 'task.created', { task: taskRecord, source: 'tasks' });
         res.json({ success: true, id });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -547,10 +591,10 @@ app.put('/api/tasks/:id', validateBody(taskUpdateSchema), async (req, res) => {
         };
         await updateRows(
             'tasks',
-            { id: req.params.id },
+            { id: req.params.id, owner_id: req.ownerId },
             { title, description, status, priority, due_date }
         );
-        void emitIntegrationEvent('task.updated', { task: taskRecord, source: 'tasks' });
+        void emitIntegrationEvent(req.ownerId, 'task.updated', { task: taskRecord, source: 'tasks' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -559,8 +603,8 @@ app.put('/api/tasks/:id', validateBody(taskUpdateSchema), async (req, res) => {
 
 app.delete('/api/tasks/:id', async (req, res) => {
     try {
-        await deleteRows('tasks', { id: req.params.id });
-        void emitIntegrationEvent('task.deleted', { task: { id: req.params.id }, source: 'tasks' });
+        await deleteRows('tasks', { id: req.params.id, owner_id: req.ownerId });
+        void emitIntegrationEvent(req.ownerId, 'task.deleted', { task: { id: req.params.id }, source: 'tasks' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -569,7 +613,7 @@ app.delete('/api/tasks/:id', async (req, res) => {
 
 app.get('/api/finances', async (req, res) => {
     try {
-        const rows = await selectRows('finances', { order: 'date.desc' });
+        const rows = await selectRows('finances', { filters: { owner_id: req.ownerId }, order: 'date.desc' });
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -579,8 +623,12 @@ app.get('/api/finances', async (req, res) => {
 app.post('/api/finances', validateBody(financeSchema), async (req, res) => {
     const { id, concept, type, amount, date, project_id } = req.body;
     try {
+        if (project_id && !(await assertProjectOwnership(project_id, req.ownerId))) {
+            return res.status(404).json({ error: 'Proyecto no encontrado' });
+        }
         const financeRecord = {
             id,
+            owner_id: req.ownerId,
             concept,
             type,
             amount,
@@ -592,7 +640,7 @@ app.post('/api/finances', validateBody(financeSchema), async (req, res) => {
             financeRecord,
             'id'
         );
-        void emitIntegrationEvent('finance.created', { finance: financeRecord, source: 'finances' });
+        void emitIntegrationEvent(req.ownerId, 'finance.created', { finance: financeRecord, source: 'finances' });
         res.json({ success: true, id });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -601,8 +649,8 @@ app.post('/api/finances', validateBody(financeSchema), async (req, res) => {
 
 app.delete('/api/finances/:id', async (req, res) => {
     try {
-        await deleteRows('finances', { id: req.params.id });
-        void emitIntegrationEvent('finance.deleted', { finance: { id: req.params.id }, source: 'finances' });
+        await deleteRows('finances', { id: req.params.id, owner_id: req.ownerId });
+        void emitIntegrationEvent(req.ownerId, 'finance.deleted', { finance: { id: req.params.id }, source: 'finances' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -611,7 +659,7 @@ app.delete('/api/finances/:id', async (req, res) => {
 
 app.get('/api/activities', async (req, res) => {
     try {
-        const rows = await selectRows('activities', { order: 'date.desc', limit: 50 });
+        const rows = await selectRows('activities', { filters: { owner_id: req.ownerId }, order: 'date.desc', limit: 50 });
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -625,6 +673,7 @@ app.post('/api/activities', validateBody(activitySchema), async (req, res) => {
             'activities',
             {
                 id,
+                owner_id: req.ownerId,
                 title,
                 desc: desc || '',
                 date,
@@ -639,7 +688,7 @@ app.post('/api/activities', validateBody(activitySchema), async (req, res) => {
 
 app.get('/api/notes', async (req, res) => {
     try {
-        const rows = await selectRows('notes', { order: 'created_at.desc' });
+        const rows = await selectRows('notes', { filters: { owner_id: req.ownerId }, order: 'created_at.desc' });
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -651,6 +700,7 @@ app.post('/api/notes', validateBody(noteSchema), async (req, res) => {
     try {
         const noteRecord = {
             id,
+            owner_id: req.ownerId,
             title,
             content: content || '',
             folder: folder || 'General',
@@ -662,7 +712,7 @@ app.post('/api/notes', validateBody(noteSchema), async (req, res) => {
             noteRecord,
             'id'
         );
-        void emitIntegrationEvent('note.created', { note: noteRecord, source: 'notes' });
+        void emitIntegrationEvent(req.ownerId, 'note.created', { note: noteRecord, source: 'notes' });
         res.json({ success: true, id });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -681,10 +731,10 @@ app.put('/api/notes/:id', validateBody(noteUpdateSchema), async (req, res) => {
         };
         await updateRows(
             'notes',
-            { id: req.params.id },
+            { id: req.params.id, owner_id: req.ownerId },
             { title, content, folder, color }
         );
-        void emitIntegrationEvent('note.updated', { note: noteRecord, source: 'notes' });
+        void emitIntegrationEvent(req.ownerId, 'note.updated', { note: noteRecord, source: 'notes' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -693,8 +743,8 @@ app.put('/api/notes/:id', validateBody(noteUpdateSchema), async (req, res) => {
 
 app.delete('/api/notes/:id', async (req, res) => {
     try {
-        await deleteRows('notes', { id: req.params.id });
-        void emitIntegrationEvent('note.deleted', { note: { id: req.params.id }, source: 'notes' });
+        await deleteRows('notes', { id: req.params.id, owner_id: req.ownerId });
+        void emitIntegrationEvent(req.ownerId, 'note.deleted', { note: { id: req.params.id }, source: 'notes' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -703,7 +753,7 @@ app.delete('/api/notes/:id', async (req, res) => {
 
 app.get('/api/folders', async (req, res) => {
     try {
-        const rows = await selectRows('note_folders', { columns: 'name' });
+        const rows = await selectRows('note_folders', { filters: { owner_id: req.ownerId }, columns: 'name' });
         res.json(rows.map((r) => r.name));
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -716,12 +766,13 @@ app.post('/api/folders', validateBody(folderSchema), async (req, res) => {
         await upsertRow(
             'note_folders',
             {
+                owner_id: req.ownerId,
                 name,
             },
-            'name'
+            'owner_id,name'
         );
         if (name && color) {
-            const current = await selectOneRow('settings', { filters: { key: 'noteFolderColors' } });
+            const current = await selectOneRow('settings', { filters: { owner_id: req.ownerId, key: 'noteFolderColors' } });
             let colors = {};
             if (current && current.value) {
                 try {
@@ -731,9 +782,9 @@ app.post('/api/folders', validateBody(folderSchema), async (req, res) => {
                 }
             }
             colors[name] = color;
-            await upsertRow('settings', { key: 'noteFolderColors', value: JSON.stringify(colors) }, 'key');
+            await upsertRow('settings', { owner_id: req.ownerId, key: 'noteFolderColors', value: JSON.stringify(colors) }, 'owner_id,key');
         }
-        void emitIntegrationEvent('folder.created', { folder: { name, color: color || null }, source: 'folders' });
+        void emitIntegrationEvent(req.ownerId, 'folder.created', { folder: { name, color: color || null }, source: 'folders' });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -742,7 +793,7 @@ app.post('/api/folders', validateBody(folderSchema), async (req, res) => {
 
 app.get('/api/settings/:key', async (req, res) => {
     try {
-        const row = await selectOneRow('settings', { filters: { key: req.params.key } });
+        const row = await selectOneRow('settings', { filters: { owner_id: req.ownerId, key: req.params.key } });
         res.json({ value: row ? row.value : null });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -755,10 +806,11 @@ app.post('/api/settings', validateBody(settingSchema), async (req, res) => {
         await upsertRow(
             'settings',
             {
+                owner_id: req.ownerId,
                 key,
                 value: String(value),
             },
-            'key'
+            'owner_id,key'
         );
         res.json({ success: true });
     } catch (err) {
@@ -768,7 +820,7 @@ app.post('/api/settings', validateBody(settingSchema), async (req, res) => {
 
 app.get('/api/integrations', async (req, res) => {
     try {
-        const rows = await getIntegrations();
+        const rows = await getIntegrations(req.ownerId);
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -777,7 +829,7 @@ app.get('/api/integrations', async (req, res) => {
 
 app.get('/api/integration-events', async (req, res) => {
     try {
-        const rows = await selectRows('integration_events', { order: 'created_at.desc', limit: 50 });
+        const rows = await selectRows('integration_events', { filters: { owner_id: req.ownerId }, order: 'created_at.desc', limit: 50 });
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -795,6 +847,7 @@ app.post('/api/integrations', validateBody(integrationSchema), async (req, res) 
         const now = integrationNow();
         const record = {
             id: id || `${Date.now()}`,
+            owner_id: req.ownerId,
             name,
             type,
             enabled,
@@ -819,7 +872,7 @@ app.put('/api/integrations/:id', validateBody(integrationSchema), async (req, re
     try {
         await updateRows(
             'integrations',
-            { id: req.params.id },
+            { id: req.params.id, owner_id: req.ownerId },
             {
                 name,
                 type,
@@ -836,8 +889,8 @@ app.put('/api/integrations/:id', validateBody(integrationSchema), async (req, re
 
 app.delete('/api/integrations/:id', async (req, res) => {
     try {
-        await deleteRows('integrations', { id: req.params.id });
-        await deleteRows('integration_events', { integration_id: req.params.id });
+        await deleteRows('integrations', { id: req.params.id, owner_id: req.ownerId });
+        await deleteRows('integration_events', { integration_id: req.params.id, owner_id: req.ownerId });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -846,7 +899,7 @@ app.delete('/api/integrations/:id', async (req, res) => {
 
 app.post('/api/integrations/:id/test', async (req, res) => {
     try {
-        const integration = await selectOneRow('integrations', { filters: { id: req.params.id } });
+        const integration = await selectOneRow('integrations', { filters: { id: req.params.id, owner_id: req.ownerId } });
         if (!integration) {
             return res.status(404).json({ error: 'Integration not found' });
         }
@@ -883,6 +936,7 @@ app.post('/api/integrations/:id/test', async (req, res) => {
                 const text = await response.text();
                 await logIntegrationEvent({
                     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                    owner_id: req.ownerId,
                     integration_id: String(normalized.id),
                     event_type: 'integration.test',
                     payload,
@@ -906,7 +960,7 @@ app.post('/api/integrations/:id/test', async (req, res) => {
 
 app.get('/api/business-notifications', async (req, res) => {
     try {
-        const rows = await getBusinessNotifications(100);
+        const rows = await getBusinessNotifications(req.ownerId, 100);
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -918,7 +972,7 @@ app.put('/api/business-notifications/:id', validateBody(businessNotificationUpda
     try {
         await updateRows(
             'business_notifications',
-            { id: req.params.id },
+            { id: req.params.id, owner_id: req.ownerId },
             {
                 is_read: is_read === true || is_read === 'true' || is_read === 1 || is_read === '1',
                 label,
@@ -938,6 +992,10 @@ app.post('/webhooks/n8n/business-email', async (req, res) => {
             console.error('N8N_WEBHOOK_SECRET no está configurado: rechazando webhook entrante por seguridad.');
             return res.status(503).json({ error: 'Webhook no configurado' });
         }
+        if (!N8N_WEBHOOK_OWNER_ID) {
+            console.error('N8N_WEBHOOK_OWNER_ID no está configurado: no se sabe a qué cuenta pertenece este correo.');
+            return res.status(503).json({ error: 'Webhook no configurado (falta owner)' });
+        }
         const secretHeader = String(req.headers['x-gestor-webhook-secret'] || '').trim();
         if (!secretHeader || secretHeader !== N8N_WEBHOOK_SECRET) {
             return res.status(401).json({ error: 'Invalid webhook secret' });
@@ -953,6 +1011,7 @@ app.post('/webhooks/n8n/business-email', async (req, res) => {
         const payload = parsed.data;
         const record = {
             id: String(payload.id || payload.message_id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+            owner_id: N8N_WEBHOOK_OWNER_ID,
             source: String(payload.source || 'gmail'),
             label: String(payload.label || 'negocios'),
             from_name: String(payload.from_name || ''),
@@ -971,7 +1030,7 @@ app.post('/webhooks/n8n/business-email', async (req, res) => {
         };
 
         await upsertRow('business_notifications', record, 'id');
-        void emitIntegrationEvent('business.email.received', { notification: record, raw: payload, source: 'n8n' });
+        void emitIntegrationEvent(N8N_WEBHOOK_OWNER_ID, 'business.email.received', { notification: record, raw: payload, source: 'n8n' });
 
         res.json({
             success: true,
