@@ -46,6 +46,11 @@ function validateBody(schema) {
 }
 
 const app = express();
+// Vercel pone la app detrás de su propio proxy: sin esto, express-rate-limit
+// (usado en /api/auth/login) revienta con un 500 crudo al ver la cabecera
+// X-Forwarded-For sin "trust proxy" configurado -- justo lo que le pasaba
+// a Kevin al intentar entrar con una contraseña que sí era correcta.
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_AUTH_KEY =
