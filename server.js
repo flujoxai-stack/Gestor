@@ -167,8 +167,12 @@ app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
         const payload = await loginRes.json().catch(() => ({}));
 
         if (!loginRes.ok) {
+            // Supabase GoTrue no siempre usa "msg"/"message" -- errores como
+            // el de correo sin confirmar vienen en "error_description", y
+            // sin esto el usuario solo veía el mensaje genérico de abajo
+            // sin pista real de qué estaba pasando.
             return res.status(loginRes.status).json({
-                error: payload?.msg || payload?.message || 'No se pudo iniciar sesión',
+                error: payload?.msg || payload?.message || payload?.error_description || 'No se pudo iniciar sesión',
             });
         }
 
