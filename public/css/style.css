@@ -442,9 +442,18 @@ body[data-auth="locked"] {
     color: #4cbac2;
 }
 
-.auth-field-toggle {
+/* Selector reforzado (.auth-field .auth-field-toggle, no solo
+   .auth-field-toggle a secas): ".auth-form button" tiene la misma
+   especificidad que una clase sola y viene después en la hoja de
+   estilos, así que le ganaba la partida -- el botón salía con el
+   ancho completo y el fondo teal del botón "Entrar" en vez del
+   ícono chiquito y transparente que era la idea. */
+.auth-field .auth-field-toggle {
     position: absolute;
     right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    margin: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -454,14 +463,16 @@ body[data-auth="locked"] {
     border: none;
     border-radius: 10px;
     background: transparent;
+    box-shadow: none;
     color: rgba(255, 255, 255, 0.4);
     cursor: pointer;
     transition: color 0.15s ease, background-color 0.15s ease;
 }
 
-.auth-field-toggle:hover {
+.auth-field .auth-field-toggle:hover {
     color: #fff;
     background: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
 }
 
 #login-password {
