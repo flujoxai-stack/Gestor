@@ -7,6 +7,20 @@ const loginBtn = document.getElementById('login-btn');
 const loginLogoutBtn = document.getElementById('logout-btn');
 const sidebarLogoutBtn = document.getElementById('sidebar-logout-btn');
 const authMessage = document.getElementById('auth-message');
+const togglePasswordBtn = document.getElementById('toggle-login-password');
+const loginPasswordInput = document.getElementById('login-password');
+
+// Botón de "ojo" en el login: alterna type="password"/"text" para que el
+// usuario pueda ver lo que escribió antes de enviarlo (evita el ida-y-vuelta
+// de "no me deja entrar" por un typo invisible en la contraseña).
+togglePasswordBtn?.addEventListener('click', () => {
+    const showing = loginPasswordInput.type === 'text';
+    loginPasswordInput.type = showing ? 'password' : 'text';
+    togglePasswordBtn.setAttribute('aria-label', showing ? 'Mostrar contraseña' : 'Ocultar contraseña');
+    togglePasswordBtn.setAttribute('aria-pressed', String(!showing));
+    document.getElementById('toggle-login-password-icon-show').style.display = showing ? '' : 'none';
+    document.getElementById('toggle-login-password-icon-hide').style.display = showing ? 'none' : '';
+});
 
 function setMessage(text, type = 'info') {
     if (!authMessage) return;

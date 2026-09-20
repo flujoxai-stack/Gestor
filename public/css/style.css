@@ -442,6 +442,32 @@ body[data-auth="locked"] {
     color: #4cbac2;
 }
 
+.auth-field-toggle {
+    position: absolute;
+    right: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.auth-field-toggle:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+#login-password {
+    padding-right: 44px;
+}
+
 .auth-form input {
     width: 100%;
     border: 1px solid rgba(255, 255, 255, 0.1);
