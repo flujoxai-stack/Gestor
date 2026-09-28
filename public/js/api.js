@@ -25,14 +25,34 @@ function getStoredAccessToken() {
 
 async function apiFetch(input, options = {}) {
     const requestUrl = typeof input === 'string' ? input : input?.url || '';
-    const headers = new Headers(options.headers || (input && input.headers ? input.headers : undefined));
-    if (requestUrl.startsWith(API_URL)) {
-        const accessToken = getStoredAccessToken();
-        if (accessToken) {
-            headers.set('Authorization', `Bearer ${accessToken}`);
+    const isApiCall = requestUrl.startsWith(API_URL);
+
+    const doFetch = () => {
+        const headers = new Headers(options.headers || (input && input.headers ? input.headers : undefined));
+        if (isApiCall) {
+            const accessToken = getStoredAccessToken();
+            if (accessToken) {
+                headers.set('Authorization', `Bearer ${accessToken}`);
+            }
+        }
+        return nativeFetch(input, { ...options, headers });
+    };
+
+    let res = await doFetch();
+
+    // Red de seguridad contra el bug de sesión por tiempo: si el
+    // access_token ya venció (401) y auth.js expone su renovador, intenta
+    // una sola vez renovarlo y repetir la petición antes de darla por
+    // fallida -- así una acción (crear nota, tarea, etc.) que coincide
+    // justo con el vencimiento no se pierde con un error genérico.
+    if (res.status === 401 && isApiCall && typeof window.__gestorRefreshAccessToken === 'function') {
+        const refreshed = await window.__gestorRefreshAccessToken();
+        if (refreshed?.access_token) {
+            res = await doFetch();
         }
     }
-    return nativeFetch(input, { ...options, headers });
+
+    return res;
 }
 
 // Genera un ID único tipo timestamp (compatible con el sistema original)

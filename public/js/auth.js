@@ -49,6 +49,87 @@ function saveSession(session) {
     }
 }
 
+// BUG DE SESIÓN POR TIEMPO: el access_token de Supabase vence a la hora.
+// Sin esto, cualquier guardado (nota, tarea, proyecto...) hecho después de
+// esa hora fallaba con un error genérico sin explicación. Se renueva solo,
+// en segundo plano, unos minutos antes de que venza -- el usuario nunca
+// debería volver a ver ese error. refreshInFlight evita pedir dos
+// renovaciones a la vez (Supabase invalida el refresh_token anterior en
+// cuanto se usa uno nuevo, así que una segunda llamada en paralelo con el
+// token viejo fallaría).
+let refreshTimer = null;
+let refreshInFlight = null;
+
+function scheduleTokenRefresh(session) {
+    if (refreshTimer) {
+        clearTimeout(refreshTimer);
+        refreshTimer = null;
+    }
+    // expires_at (marca de tiempo absoluta, en segundos) es lo correcto acá
+    // en vez de expires_in (segundos relativos AL MOMENTO EN QUE SE EMITIÓ
+    // el token) -- si el navegador se cerró y se reabre esta sesión guardada
+    // 40 minutos después, contar expires_in desde "ahora" programaría la
+    // renovación muy tarde, cuando el token ya venció hace rato.
+    let msUntilExpiry;
+    if (session?.expires_at) {
+        msUntilExpiry = session.expires_at * 1000 - Date.now();
+    } else if (session?.expires_in) {
+        msUntilExpiry = session.expires_in * 1000;
+    } else {
+        return;
+    }
+    // Renovar 5 minutos antes de que venza, con un piso de 10s (si ya está
+    // por vencer o vencido, renovar casi de inmediato en vez de negativo).
+    const msUntilRefresh = Math.max(msUntilExpiry - 5 * 60 * 1000, 10000);
+    refreshTimer = setTimeout(async () => {
+        const refreshed = await refreshAccessToken();
+        if (!refreshed) {
+            // El refresh_token también venció o ya no es válido: no hay
+            // forma de seguir sin que el usuario vuelva a poner su clave.
+            saveSession(null);
+            setLocked(true);
+            setMessage('Tu sesión expiró. Inicia sesión de nuevo.', 'error');
+        }
+    }, msUntilRefresh);
+}
+
+async function refreshAccessToken() {
+    if (refreshInFlight) return refreshInFlight;
+
+    refreshInFlight = (async () => {
+        try {
+            const rawSession = localStorage.getItem(SESSION_KEY);
+            const session = rawSession ? JSON.parse(rawSession) : null;
+            if (!session?.refresh_token) return null;
+
+            const res = await fetch('/api/auth/refresh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: session.refresh_token }),
+            });
+            if (!res.ok) return null;
+
+            const data = await res.json().catch(() => null);
+            if (!data?.access_token) return null;
+
+            saveSession(data);
+            scheduleTokenRefresh(data);
+            return data;
+        } catch {
+            return null;
+        } finally {
+            refreshInFlight = null;
+        }
+    })();
+
+    return refreshInFlight;
+}
+
+// api.js llama a esto como red de seguridad cuando una petición cualquiera
+// responde 401 -- por si el timer de arriba no llegó a dispararse (pestaña
+// en segundo plano, computadora en suspensión, etc.).
+window.__gestorRefreshAccessToken = refreshAccessToken;
+
 // El correo permitido lo decide el servidor (variable de entorno
 // AUTH_ALLOWED_EMAILS), no este archivo -- así el repo público nunca
 // expone en el código quiénes tienen acceso. /api/auth/me ya responde
@@ -72,7 +153,20 @@ async function applySession(session) {
         return;
     }
 
-    const valid = await validateSession(session);
+    let activeSession = session;
+    let valid = await validateSession(activeSession);
+    if (!valid) {
+        // El access_token guardado puede estar vencido simplemente porque
+        // pasó tiempo con el navegador cerrado -- antes de mandar al usuario
+        // a loguearse de nuevo, intentar renovarlo con el refresh_token
+        // (que dura mucho más) por si el problema se arregla solo.
+        const refreshed = await refreshAccessToken();
+        if (refreshed) {
+            activeSession = refreshed;
+            valid = true;
+        }
+    }
+
     if (!valid) {
         saveSession(null);
         setMessage('Acceso denegado o sesión inválida.', 'error');
@@ -80,7 +174,8 @@ async function applySession(session) {
         return;
     }
 
-    saveSession(session);
+    saveSession(activeSession);
+    scheduleTokenRefresh(activeSession);
     setLocked(false);
     setMessage('');
 
@@ -90,7 +185,7 @@ async function applySession(session) {
     // completo -- se deriva de la parte antes de "@" (ej. "flujoxai" de
     // "flujoxai@gmail.com"). El correo completo sigue visible tal cual en
     // el modal de Perfil (#profile-email), donde sí es información útil.
-    const email = session.user?.email || '';
+    const email = activeSession.user?.email || '';
     const displayName = email.split('@')[0].replace(/^./, (c) => c.toUpperCase()) || email;
     document.getElementById('sidebar-user-email')?.replaceChildren(displayName);
     document.getElementById('header-user-email')?.replaceChildren(displayName);

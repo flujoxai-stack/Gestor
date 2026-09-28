@@ -108,6 +108,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 async function requireAuth(req, res, next) {
     if (req.method === 'OPTIONS') return next();
     if (req.path === '/auth/login') return next();
+    // El access_token ya vencido es justo la razón por la que se llama a
+    // /auth/refresh -- no puede exigírsele un Bearer válido para pasar.
+    if (req.path === '/auth/refresh') return next();
 
     const authHeader = req.headers.authorization || '';
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
@@ -200,6 +203,48 @@ app.post('/api/auth/login', loginRateLimiter, async (req, res) => {
     } catch (err) {
         console.error('Login error:', err);
         return res.status(500).json({ error: 'Login failed' });
+    }
+});
+
+// MULTI-01 / bug de sesión: el access_token de Supabase dura 1 hora nada
+// más. Sin esta ruta, cualquier acción de guardado (nota, tarea, proyecto,
+// lo que sea) fallaba con 401 en cuanto la pestaña llevaba más de una hora
+// abierta, con un error genérico que no explicaba nada. El frontend llama
+// aquí con el refresh_token (que sí dura mucho más) para pedir un
+// access_token nuevo sin que el usuario tenga que volver a loguearse.
+app.post('/api/auth/refresh', async (req, res) => {
+    try {
+        const refreshToken = String(req.body?.refresh_token || '').trim();
+        if (!refreshToken) {
+            return res.status(400).json({ error: 'refresh_token requerido' });
+        }
+
+        const refreshRes = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+            method: 'POST',
+            headers: {
+                apikey: SUPABASE_AUTH_KEY,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ refresh_token: refreshToken }),
+        });
+
+        const payload = await refreshRes.json().catch(() => ({}));
+
+        if (!refreshRes.ok) {
+            return res.status(refreshRes.status).json({
+                error: payload?.msg || payload?.message || payload?.error_description || 'No se pudo renovar la sesión',
+            });
+        }
+
+        const userEmail = String(payload?.user?.email || '').toLowerCase();
+        if (AUTH_ALLOWED_EMAILS.length > 0 && !AUTH_ALLOWED_EMAILS.includes(userEmail)) {
+            return res.status(403).json({ error: 'Acceso denegado' });
+        }
+
+        return res.json(payload);
+    } catch (err) {
+        console.error('Refresh error:', err);
+        return res.status(500).json({ error: 'No se pudo renovar la sesión' });
     }
 });
 
