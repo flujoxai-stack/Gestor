@@ -174,6 +174,104 @@ window.startGestorApp = async function startGestorApp() {
         if (originalLog) originalLog(title, desc);
     };
 
+    // ========================================================
+    // RECORDATORIOS INTELIGENTES
+    // ========================================================
+    // Mientras el CRM está abierto, de vez en cuando aparece una animación
+    // chiquita (mismo estilo que los toasts, distinto color) recordando UNA
+    // tarea vencida o por vencer -- nunca más de una a la vez, rota entre
+    // las pendientes en vez de repetir siempre la misma, y no molesta para
+    // nada si no hay nada urgente (esa es la parte "inteligente": se calla
+    // solo cuando no hace falta decir nada).
+    let reminderCursor = 0;
+    const dismissedReminderIds = new Set();
+
+    function reminderDueLabel(days) {
+        if (days < 0) return `Venció hace ${Math.abs(days)} día${Math.abs(days) === 1 ? '' : 's'}`;
+        if (days === 0) return 'Vence hoy';
+        return 'Vence mañana';
+    }
+
+    // Solo vencidas, de hoy o de mañana -- lo demás no amerita interrumpir.
+    function getReminderQueue() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const items = [];
+        state.projects.forEach((p) => {
+            p.tasks.forEach((t) => {
+                if (t.status === 'done' || !t.dueDate) return;
+                const due = new Date(`${t.dueDate}T00:00:00`);
+                if (Number.isNaN(due.getTime())) return;
+                const days = Math.round((due - today) / 86400000);
+                if (days <= 1) items.push({ task: t, project: p, days });
+            });
+        });
+        items.sort((a, b) => a.days - b.days);
+        return items;
+    }
+
+    function showReminderToast(entry) {
+        const { task: t, project: p, days } = entry;
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast-custom toast-reminder ${days < 0 ? 'is-overdue' : 'is-soon'}`;
+        toast.innerHTML = `
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="toast-reminder-icon"><circle cx="12" cy="12" r="9"></circle><path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 3"></path></svg>
+            <div class="toast-reminder-body">
+                <strong>${escapeHtml(t.title)}</strong>
+                <span>${escapeHtml(reminderDueLabel(days))} · ${escapeHtml(p.name)}</span>
+            </div>
+            <button type="button" class="toast-reminder-close" aria-label="Cerrar recordatorio">&times;</button>`;
+
+        function hideToastEl() {
+            clearTimeout(autoTimer);
+            toast.classList.add('hide-toast');
+            setTimeout(() => toast.remove(), 300);
+        }
+
+        toast.addEventListener('click', (event) => {
+            if (event.target.closest('.toast-reminder-close')) {
+                // Cerrado a mano: no volver a mostrar esta tarea en lo que
+                // dure la sesión, ya se dio por enterado.
+                dismissedReminderIds.add(t.id);
+                hideToastEl();
+                return;
+            }
+            window.editTask(t.id);
+            hideToastEl();
+        });
+
+        container.appendChild(toast);
+        const autoTimer = setTimeout(hideToastEl, 8000);
+    }
+
+    function checkTaskReminders() {
+        const queue = getReminderQueue().filter((entry) => !dismissedReminderIds.has(entry.task.id));
+        if (!queue.length) return;
+        if (reminderCursor >= queue.length) reminderCursor = 0;
+        showReminderToast(queue[reminderCursor]);
+        reminderCursor++;
+    }
+
+    // Primer aviso a los 20s de abrir (no de inmediato, para no emboscar
+    // apenas carga), y luego cada 12 minutos mientras la pestaña siga
+    // abierta. Además, si el usuario se va a otra pestaña y vuelve después
+    // de un rato, se revisa otra vez al recuperar el foco.
+    let lastReminderCheckAt = 0;
+    function runReminderCheck() {
+        lastReminderCheckAt = Date.now();
+        checkTaskReminders();
+    }
+    setTimeout(runReminderCheck, 20000);
+    setInterval(runReminderCheck, 12 * 60 * 1000);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && Date.now() - lastReminderCheckAt > 5 * 60 * 1000) {
+            runReminderCheck();
+        }
+    });
+
     // ---- VISTAS ----
     const views = {
         dashboard: document.getElementById('dashboard-view'),
